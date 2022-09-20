@@ -1,3 +1,4 @@
+#%%
 # Importing libraries
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
@@ -6,6 +7,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 from random import random, seed
 import sklearn as skl
+import numba as nb
 
 
 # Defining functions
@@ -41,44 +43,48 @@ def create_X_polynomial(x, y, n):
 
     return X
 
-def linreg_polynomial(x, y, n):
+def linreg_polynomial(x, y, z, n):
     X = create_X_polynomial(x, y, n)
-    z = FrankeFunction(x, y)
 
     # Solving for beta
     beta = np.linalg.inv(X.T @ X) @ X.T @ z
     return beta
 
-def bootstrap_2d_lin(x, y, B, deg):
+def bootstrap_2d_lin(x, y, z, B, deg):
     """Returns estimated distributions of beta estimators."""
     t = np.zeros(B)
     n_datapoints = len(x)
     
-    beta = linreg_polynomial(x, y, deg)
+    beta = linreg_polynomial(x, y, z, deg)
     
     distribution = np.zeros((len(beta), B))
     for b in range(B):
         datapoints = np.random.randint(0,n_datapoints,n_datapoints)
         x_b = x[datapoints]
         y_b = y[datapoints]
-        beta_b = linreg_polynomial(x_b, y_b, deg)
+        z_b = z[datapoints]
+
+        beta_b = linreg_polynomial(x_b, y_b, z_b, deg)
         distribution[:, b] = beta_b
     return distribution
 
+#%%
 if __name__ == "__main__":
     # Generating data
     N = 1000
     x = np.random.uniform(0, 1, N)
     y = np.random.uniform(0, 1, N)
+    z = FrankeFunction(x, y)
 
     # Fit an n-degree polynomial
-    n = 5
-    beta = linreg_polynomial(x, y, n)
+    n = 20
+    beta = linreg_polynomial(x, y, z, n)
 
-    distribution = bootstrap_2d_lin(x, y, 1000, 5)
+    B = 1000
+    distribution = bootstrap_2d_lin(x, y, z, B, n)
 
     # Plots estimated distribution for the i'th parameter of the model
-    i = 20
-    plt.hist(distribution[i, :])
+    i = -1
+    plt.hist(distribution[i, :], range=[-500000, 500000])
     plt.show()
 
