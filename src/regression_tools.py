@@ -1,5 +1,6 @@
 #%%
 # Importing libraries
+# TODO: clean up imports
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -8,6 +9,16 @@ import numpy as np
 from random import random, seed
 import sklearn as skl
 import numba as nb
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.model_selection import KFold
+from sklearn.linear_model import Ridge
+from sklearn.linear_model import Lasso
+from sklearn.model_selection import cross_val_score
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 
 
 # Defining functions
@@ -50,6 +61,28 @@ def linreg_polynomial(x, y, z, n):
     beta = np.linalg.inv(X.T @ X) @ X.T @ z
     return beta
 
+#Ridge regression
+def ridgereg_polynomial(x, y, z, degree, lambdan):
+    #design matrix
+    X = create_X_polynomial(x, y, degree)
+    #create identity matrix
+    I = np.eye(len(X.T), len(X.T))
+    
+    # Solving for beta
+    beta_ridge = np.linalg.pinv(X.T@X + lambdan*I) @ X.T @ z
+    return beta_ridge
+
+#Lassso mit scikit-learn:
+def lassoreg_polynomial(x, y, z, degree, lambdan):
+    #design matrix
+    X = create_X_polynomial(x, y, degree)
+    
+    #Lasso regression with scikit-learn 
+    RegLasso = Lasso(lambdan)
+    RegLasso.fit(X,z)
+    beta_lasso = RegLasso.coef_
+    return beta_lasso
+
 def bootstrap_2d_lin(x, y, z, B, deg):
     """Returns estimated distributions of beta estimators."""
     t = np.zeros(B)
@@ -67,6 +100,45 @@ def bootstrap_2d_lin(x, y, z, B, deg):
         beta_b = linreg_polynomial(x_b, y_b, z_b, deg)
         distribution[:, b] = beta_b
     return distribution
+
+def cross_validation(k_deg_fold, x, y, z, model_fit=linreg_polynomial, degree=2, lambdan=0):
+    #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
+    assert len(x) == len(z) == len(y)
+    p = np.random.permutation(len(x))
+    x, y, z = x[p], y[p], z[p]
+    
+    #step 2: split the data in k groups with numpy.array_split
+    x = np.array_split(x, k_deg_fold); 
+    y = np.array_split(y, k_deg_fold); 
+    z = np.array_split(z, k_deg_fold)
+
+    # array to keep track of MSE for each test-group
+    MSE_array = np.zeros((k_deg_fold))
+    
+    #step 3:
+    for i in range(k_deg_fold):
+        #a) pick one group to be test data
+        x_test, y_test, z_test = x[i], y[i], z[i]
+        
+        #b) take remaining groupe as train data
+        x_train = np.ndarray.flatten(np.array(x[:i] + x[i+1:]))
+        y_train = np.ndarray.flatten(np.array(y[:i] + y[i+1:]))
+        z_train = np.ndarray.flatten(np.array(z[:i] + z[i+1:]))
+        
+        #X_train = create_X_polynomial(x_train, y_train, 2)
+        
+        #c) fit model to train data
+        if model_fit == linreg_polynomial:
+            beta = model_fit(x_train, y_train, z_train, degree)
+        elif model_fit == ridgereg_polynomial or model_fit == lassoreg_polynomial:
+            beta = model_fit(x_train, y_train, z_train, degree, lambdan)
+        
+        #d) evaluate model and save score-value
+        X_test = create_X_polynomial(x_test, y_test, degree)
+        z_tilde = X_test @ beta 
+        MSE_array[i] = MSE(z_test, z_tilde)
+        
+    return MSE_array
 
 #%%
 if __name__ == "__main__":
