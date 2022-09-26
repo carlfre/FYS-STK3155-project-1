@@ -56,7 +56,7 @@ def create_X_polynomial(x, y, n):
 
 def linreg(X, z):
     # Solving for beta
-    beta = np.linalg.inv(X.T @ X) @ X.T @ z
+    beta = np.linalg.pinv(X.T @ X) @ X.T @ z
     return beta
 
 #Ridge regression
