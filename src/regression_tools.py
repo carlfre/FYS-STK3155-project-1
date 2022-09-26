@@ -54,54 +54,45 @@ def create_X_polynomial(x, y, n):
 
     return X
 
-def linreg_polynomial(x, y, z, n):
-    X = create_X_polynomial(x, y, n)
-
+def linreg(X, z):
     # Solving for beta
     beta = np.linalg.inv(X.T @ X) @ X.T @ z
     return beta
 
 #Ridge regression
-def ridgereg_polynomial(x, y, z, degree, lambdan):
-    #design matrix
-    X = create_X_polynomial(x, y, degree)
+def ridgereg(X, z, lambdan):
     #create identity matrix
     I = np.eye(len(X.T), len(X.T))
-    
+
     # Solving for beta
     beta_ridge = np.linalg.pinv(X.T@X + lambdan*I) @ X.T @ z
     return beta_ridge
 
 #Lassso mit scikit-learn:
-def lassoreg_polynomial(x, y, z, degree, lambdan):
-    #design matrix
-    X = create_X_polynomial(x, y, degree)
-    
+def lassoreg(X, z, lambdan):
     #Lasso regression with scikit-learn 
     RegLasso = Lasso(lambdan)
     RegLasso.fit(X,z)
     beta_lasso = RegLasso.coef_
     return beta_lasso
 
-def bootstrap_2d_lin(x, y, z, B, deg):
+def bootstrap_linreg(X, z, B):
     """Returns estimated distributions of beta estimators."""
     t = np.zeros(B)
     n_datapoints = len(x)
     
-    beta = linreg_polynomial(x, y, z, deg)
-    
+    beta = linreg(X, z)
     distribution = np.zeros((len(beta), B))
     for b in range(B):
         datapoints = np.random.randint(0,n_datapoints,n_datapoints)
-        x_b = x[datapoints]
-        y_b = y[datapoints]
+        X_b = X[datapoints]
         z_b = z[datapoints]
-
-        beta_b = linreg_polynomial(x_b, y_b, z_b, deg)
+        beta_b = linreg(X_b, z_b)
         distribution[:, b] = beta_b
     return distribution
 
-def cross_validation(k_deg_fold, x, y, z, model_fit=linreg_polynomial, degree=2, lambdan=0):
+#TODO update to follow new standard (create X and send into func)
+def cross_validation(k_deg_fold, x, y, z, model_fit=linreg, degree=2, lambdan=0):
     #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
     assert len(x) == len(z) == len(y)
     p = np.random.permutation(len(x))
@@ -128,9 +119,9 @@ def cross_validation(k_deg_fold, x, y, z, model_fit=linreg_polynomial, degree=2,
         #X_train = create_X_polynomial(x_train, y_train, 2)
         
         #c) fit model to train data
-        if model_fit == linreg_polynomial:
+        if model_fit == linreg:
             beta = model_fit(x_train, y_train, z_train, degree)
-        elif model_fit == ridgereg_polynomial or model_fit == lassoreg_polynomial:
+        elif model_fit == ridgereg or model_fit == lassoreg:
             beta = model_fit(x_train, y_train, z_train, degree, lambdan)
         
         #d) evaluate model and save score-value
@@ -140,7 +131,7 @@ def cross_validation(k_deg_fold, x, y, z, model_fit=linreg_polynomial, degree=2,
         
     return MSE_array
 
-#%%
+
 if __name__ == "__main__":
     # Generating data
     N = 1000
@@ -149,14 +140,18 @@ if __name__ == "__main__":
     z = FrankeFunction(x, y)
 
     # Fit an n-degree polynomial
-    n = 20
-    beta = linreg_polynomial(x, y, z, n)
+    n = 5
+    X = create_X_polynomial(x, y, n)
+    beta = linreg(X, z)
+    ztilde = X @ beta
 
-    B = 1000
-    distribution = bootstrap_2d_lin(x, y, z, B, n)
+    
+    B = 100
+    distribution = bootstrap_linreg(X, z, B)
 
     # Plots estimated distribution for the i'th parameter of the model
     i = -1
-    plt.hist(distribution[i, :], range=[-500000, 500000])
+    plt.hist(distribution[i, :])
     plt.show()
+    
 
