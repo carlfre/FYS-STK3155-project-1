@@ -79,7 +79,7 @@ def lassoreg(X, z, lambdan):
 def bootstrap_linreg(X, z, B):
     """Returns estimated distributions of beta estimators."""
     t = np.zeros(B)
-    n_datapoints = len(x)
+    n_datapoints = len(z)
     
     beta = linreg(X, z)
     distribution = np.zeros((len(beta), B))

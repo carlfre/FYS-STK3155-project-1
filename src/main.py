@@ -12,7 +12,7 @@ import regression_tools as rt
 def problem_b():
     print("Problem b)")
 
-    #TODO fix seed
+    np.random.seed(199)
 
     # Generating data
     N = 1000
@@ -71,12 +71,14 @@ def problem_b():
     plt.title("Change in MSE with increasing polynomial order")
     plt.savefig("plots/MSE.pdf")
     plt.show()
+    plt.clf()
     plt.plot(degrees, R2_arr)
     plt.xlabel("Polynomial order")
     plt.ylabel("R2-score")
     plt.title("Change in R2 with increasing polynomial order")
     plt.savefig("plots/R2.pdf")
     plt.show()
+    plt.clf()
     print("Generated MSE and R2 plots.")
     
     # Plotting parameters in beta for all polynomial orders between 2 and 5
@@ -95,7 +97,7 @@ def problem_b():
 
 def problem_c():
     print("Problem c)")
-    #TODO fix seed
+    np.random.seed(569)
 
     # Generating data
     N = 100
@@ -131,10 +133,30 @@ def problem_c():
     plt.legend()
     plt.savefig("plots/train_v_test_MSE.pdf")
     plt.show()
+    plt.clf()
     print("Generated train v test MSE plot")
 
-
-    #TODO
+    # Bootstrap for bias-variance tradeoff analysis
+    B = 100
+    degrees = range(1, 11)
+    errors, biases, variances = [], [], []
+    for deg in degrees:
+        X = rt.create_X_polynomial(x, y, deg)
+        X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
+        distribution = rt.bootstrap_linreg(X_train, z_train, B)
+        z_pred = X_test @ distribution
+        error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
+        bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
+        variance = np.mean( np.var(z_pred, axis=1, keepdims=True) )
+        errors.append(error)
+        biases.append(bias)
+        variances.append(variance)
+    plt.plot(degrees, errors, label="Error")
+    plt.plot(degrees, biases, label="$Bias^2$")
+    plt.plot(degrees, variances, label="Variance")
+    plt.savefig("plots/bias_variance_tradeoff.pdf")
+    plt.show()
+    plt.clf()
 
 
 def problem_d():
@@ -154,3 +176,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+# %%
