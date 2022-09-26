@@ -18,11 +18,13 @@ def problem_b():
     N = 1000
     x = np.random.uniform(0, 1, N)
     y = np.random.uniform(0, 1, N)
-    epsilon = np.zeros((N)) #TODO: add non-zero error 
+
+    sigma= 0.1
+    epsilon = np.random.normal(0, sigma)
     z = rt.FrankeFunction(x, y) + epsilon
 
     # Create design matrix and train-test-split
-    deg = 5 # degree of pollynomial
+    deg = 5 # degree of polynomial
     X = rt.create_X_polynomial(x, y, deg)
     X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
 
@@ -93,6 +95,47 @@ def problem_b():
 
 def problem_c():
     print("Problem c)")
+    #TODO fix seed
+
+    # Generating data
+    N = 100
+    x = np.random.uniform(0, 1, N)
+    y = np.random.uniform(0, 1, N)
+    
+    sigma = 0.1
+    epsilon = np.random.normal(0, sigma)
+    z = rt.FrankeFunction(x, y) + epsilon
+
+    # Plot train & test MSE for degree up to 20
+    degreerange = 10
+    degrees = range(1, degreerange + 1)
+    MSE_train = []
+    MSE_test = []
+
+    for deg in degrees:
+        X = rt.create_X_polynomial(x, y, deg)
+        X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
+        beta = rt.linreg(X_train, z_train)
+        ztilde_train = X_train @ beta
+        ztilde_test = X_test @ beta
+        
+        MSE_train.append(rt.MSE(z_train, ztilde_train))
+        MSE_test.append(rt.MSE(z_test, ztilde_test))
+
+    # Plotting MSE and R2 for all polynomial orders between 2 and 5
+    plt.plot(degrees, MSE_train, label="Train data MSE")
+    plt.plot(degrees, MSE_test, label="Test data MSE")
+    plt.xlabel("Polynomial degree")
+    plt.ylabel("Mean Square Error")
+    plt.title("Train and test MSE as a function of model complexity")
+    plt.legend()
+    plt.savefig("plots/train_v_test_MSE.pdf")
+    plt.show()
+    print("Generated train v test MSE plot")
+
+
+    #TODO
+
 
 def problem_d():
     print("Problem d)")
@@ -107,7 +150,7 @@ def problem_g():
     print("Problem g)")
 
 def main():
-    problem_b()
+    problem_c()
 
 if __name__ == "__main__":
     main()
