@@ -161,6 +161,43 @@ def problem_c():
 
 def problem_d():
     print("Problem d)")
+    np.random.seed(569)
+
+    # Generating data
+    N = 150
+    x = np.random.uniform(0, 1, N)
+    y = np.random.uniform(0, 1, N)
+    
+    sigma = 0.1
+    epsilon = np.random.normal(0, sigma)
+    z = rt.FrankeFunction(x, y) + epsilon
+
+    # Plot train & test MSE for degree up to 20
+    k_fold_num = 5
+    degreerange = 10
+    degrees = range(1, degreerange + 1)
+    MSE_train = []
+    MSE_test = []
+
+    for deg in degrees:
+        X = rt.create_X_polynomial(x, y, deg)
+        MSECV_train, MSECV_test = rt.CV_linreg(k_fold_num, X, z)
+        MSE_train.append(np.mean(MSECV_train))
+        MSE_test.append(np.mean(MSECV_test))
+
+    # Plotting MSE and R2 for all polynomial orders between 2 and 5
+    plt.plot(degrees, MSE_train, label="Train data MSE")
+    plt.plot(degrees, MSE_test, label="Test data MSE")
+    plt.xlabel("Polynomial degree")
+    plt.ylabel("Mean Square Error")
+    plt.title("Train and test MSE as a function of model complexity - CV")
+    plt.legend()
+    plt.savefig("plots/Cross_Validation_MSE.pdf")
+    plt.show()
+    plt.clf()
+    print("Generated train v test MSE plot")
+
+    # Bootstrap for bias-variance tradeoff analysis
 
 def problem_e():
     print("Problem e)")
@@ -172,7 +209,7 @@ def problem_g():
     print("Problem g)")
 
 def main():
-    problem_c()
+    problem_d()
 
 if __name__ == "__main__":
     main()

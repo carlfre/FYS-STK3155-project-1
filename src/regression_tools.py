@@ -1,6 +1,8 @@
 #%%
 # Importing libraries
 # TODO: clean up imports
+from copy import copy
+from re import L
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
 from matplotlib import cm
@@ -8,7 +10,7 @@ from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
 from random import random, seed
 import sklearn as skl
-import numba as nb
+#import numba as nb
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -91,45 +93,120 @@ def bootstrap_linreg(X, z, B):
         distribution[:, b] = beta_b
     return distribution
 
-#TODO update to follow new standard (create X and send into func)
-def cross_validation(k_deg_fold, x, y, z, model_fit=linreg, degree=2, lambdan=0):
+def CV_linreg(k_deg_fold, X, z):
     #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
-    assert len(x) == len(z) == len(y)
-    p = np.random.permutation(len(x))
-    x, y, z = x[p], y[p], z[p]
+    assert len(X) == len(z)
+    p = np.random.permutation(len(X))
+    X, z = X[p], z[p]
     
     #step 2: split the data in k groups with numpy.array_split
-    x = np.array_split(x, k_deg_fold); 
-    y = np.array_split(y, k_deg_fold); 
+    X = np.array_split(X, k_deg_fold) 
     z = np.array_split(z, k_deg_fold)
 
     # array to keep track of MSE for each test-group
-    MSE_array = np.zeros((k_deg_fold))
+    MSE_train = np.zeros((k_deg_fold))
+    MSE_test = np.zeros((k_deg_fold))
+
+    #step 3:
+    for i in range(k_deg_fold):
+        #a) pick one group to be test data
+        X_test , z_test = X[i], z[i]
+        
+        #b) take remaining groupe as train data
+        copy_X = X[:]
+        copy_X[0], copy_X[i] = copy_X[i], copy_X[0]
+        copy_z = z[:]
+        copy_z[0], copy_z[i] = copy_z[i], copy_z[0]
+        X_train = np.concatenate([m for m in copy_X[1:]])
+        z_train = np.concatenate([m for m in copy_z[1:]])
+        
+        #c) fit model to train data with linreg
+        beta = linreg(X_train, z_train)
+        z_tilde_test = X_test @ beta 
+        z_tilde_train = X_train @ beta
+
+        #d) evaluate model and save score-value
+        MSE_train[i] = MSE(z_train, z_tilde_train)
+        MSE_test[i] = MSE(z_test, z_tilde_test)
+
+    return MSE_train, MSE_test
+
+def CV_losso(k_deg_fold, X, z, lambdan):
+    #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
+    assert len(X) == len(z)
+    p = np.random.permutation(len(X))
+    X, z = X[p], z[p]
+    
+    #step 2: split the data in k groups with numpy.array_split
+    X = np.array_split(X, k_deg_fold); 
+    z = np.array_split(z, k_deg_fold)
+
+    # array to keep track of MSE for each test-group
+    MSE_train = np.zeros((k_deg_fold))
+    MSE_test = np.zeros((k_deg_fold))
     
     #step 3:
     for i in range(k_deg_fold):
         #a) pick one group to be test data
-        x_test, y_test, z_test = x[i], y[i], z[i]
+        X_test , z_test = X[i], z[i]
         
         #b) take remaining groupe as train data
-        x_train = np.ndarray.flatten(np.array(x[:i] + x[i+1:]))
-        y_train = np.ndarray.flatten(np.array(y[:i] + y[i+1:]))
-        z_train = np.ndarray.flatten(np.array(z[:i] + z[i+1:]))
-        
-        #X_train = create_X_polynomial(x_train, y_train, 2)
-        
-        #c) fit model to train data
-        if model_fit == linreg:
-            beta = model_fit(x_train, y_train, z_train, degree)
-        elif model_fit == ridgereg or model_fit == lassoreg:
-            beta = model_fit(x_train, y_train, z_train, degree, lambdan)
-        
+        copy_X = X[:]
+        copy_X[0], copy_X[i] = copy_X[i], copy_X[0]
+        copy_z = z[:]
+        copy_z[0], copy_z[i] = copy_z[i], copy_z[0]
+        X_train = np.concatenate([m for m in copy_X[1:]])
+        z_train = np.concatenate([m for m in copy_z[1:]])
+
+        #c) fit model to train data with linreg
+        beta = lassoreg(X_train, z_train, lambdan)
+
         #d) evaluate model and save score-value
-        X_test = create_X_polynomial(x_test, y_test, degree)
-        z_tilde = X_test @ beta 
-        MSE_array[i] = MSE(z_test, z_tilde)
+        z_tilde_test = X_test @ beta 
+        z_tilde_train = X_train @ beta
+
+        MSE_train[i] = MSE(z_train, z_tilde_train)
+        MSE_test[i] = MSE(z_test, z_tilde_test)
+
+    return MSE_train, MSE_test
+
+def CV_ridge(k_deg_fold, X, z, lambdan):
+        #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
+    assert len(X) == len(z)
+    p = np.random.permutation(len(X))
+    X, z = X[p], z[p]
+
+    #step 2: split the data in k groups with numpy.array_split
+    X = np.array_split(X, k_deg_fold); 
+    z = np.array_split(z, k_deg_fold)
+
+    # array to keep track of MSE for each test-group
+    MSE_train = np.zeros((k_deg_fold))
+    MSE_test = np.zeros((k_deg_fold))
+    #step 3:
+    for i in range(k_deg_fold):
+        #a) pick one group to be test data
+        X_test , z_test = X[i], z[i]
+
+        #b) take remaining groupe as train data
+        copy_X = X[:]
+        copy_X[0], copy_X[i] = copy_X[i], copy_X[0]
+        copy_z = z[:]
+        copy_z[0], copy_z[i] = copy_z[i], copy_z[0]
+        X_train = np.concatenate([m for m in copy_X[1:]])
+        z_train = np.concatenate([m for m in copy_z[1:]])
         
-    return MSE_array
+        #c) fit model to train data with linreg
+        beta = ridgereg(X_train, z_train, lambdan)
+
+        #d) evaluate model and save score-value
+        z_tilde_test = X_test @ beta
+        z_tilde_train = X_train @ beta
+
+        MSE_train[i] = MSE(z_train, z_tilde_train)
+        MSE_test[i] = MSE(z_test, z_tilde_test)  
+
+    return MSE_train, MSE_test
 
 
 if __name__ == "__main__":
@@ -152,6 +229,12 @@ if __name__ == "__main__":
     # Plots estimated distribution for the i'th parameter of the model
     i = -1
     plt.hist(distribution[i, :])
-    plt.show()
+    #plt.show()
+
+    k_fold = 8
+    lambdan = 0.4
+    MSE_arr = CV_linreg(k_fold, X, z)
+    print(MSE_arr)
+
     
 
