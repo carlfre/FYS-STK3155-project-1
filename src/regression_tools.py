@@ -171,7 +171,7 @@ def CV_losso(k_deg_fold, X, z, lambdan):
     return MSE_train, MSE_test
 
 def CV_ridge(k_deg_fold, X, z, lambdan):
-        #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
+     #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
     assert len(X) == len(z)
     p = np.random.permutation(len(X))
     X, z = X[p], z[p]
@@ -208,6 +208,19 @@ def CV_ridge(k_deg_fold, X, z, lambdan):
 
     return MSE_train, MSE_test
 
+def bootstrap_ridge(X, z, B, lambdan):
+    """Returns estimated distributions of beta estimators."""
+    n_datapoints = len(z)
+    
+    beta = ridgereg(X, z, lambdan)
+    distribution = np.zeros((len(beta), B))
+    for b in range(B):
+        datapoints = np.random.randint(0,n_datapoints,n_datapoints)
+        X_b = X[datapoints]
+        z_b = z[datapoints]
+        beta_b = ridgereg(X_b, z_b, lambdan)
+        distribution[:, b] = beta_b
+    return distribution
 
 if __name__ == "__main__":
     # Generating data
