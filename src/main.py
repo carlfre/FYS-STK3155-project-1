@@ -93,7 +93,7 @@ def problem_b():
     plt.show()
     print("Generated parameter value plot.")
 
-    
+
 
 def problem_c():
     print("Problem c)")
@@ -159,6 +159,7 @@ def problem_c():
     plt.clf()
 
 
+
 def problem_d():
     print("Problem d)")
     np.random.seed(569)
@@ -196,6 +197,7 @@ def problem_d():
     plt.show()
     plt.clf()
     print("Generated train v test MSE plot")
+
 
 #ToDo clean up (titles, labels etc.)
 def problem_e():
@@ -276,7 +278,7 @@ def problem_e():
 
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
-            MSECV_train, MSECV_test = rt.CV_ridge(k_fold_num, X, z, l)
+            MSECV_train, MSECV_test = rt.CV_ridgereg(k_fold_num, X, z, l)
             MSE_train.append(np.mean(MSECV_train))
             MSE_test.append(np.mean(MSECV_test))
 
@@ -300,7 +302,7 @@ def problem_g():
     print("Problem g)")
 
 def main():
-    problem_f()
+    problem_e()
 
 if __name__ == "__main__":
     main()

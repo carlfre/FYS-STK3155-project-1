@@ -70,7 +70,7 @@ def ridgereg(X, z, lambdan):
     beta_ridge = np.linalg.pinv(X.T@X + lambdan*I) @ X.T @ z
     return beta_ridge
 
-#Lassso mit scikit-learn:
+#Lassso with scikit-learn:
 def lassoreg(X, z, lambdan):
     #Lasso regression with scikit-learn 
     RegLasso = Lasso(lambdan)
@@ -94,6 +94,10 @@ def bootstrap_linreg(X, z, B):
     return distribution
 
 def CV_linreg(k_deg_fold, X, z):
+    "Preformes Cross-Validation with model=linreg, X=design-matrix"
+    "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
+    "np.mean() on output is estimated MSE with cross-validation"
+
     #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
     assert len(X) == len(z)
     p = np.random.permutation(len(X))
@@ -103,62 +107,62 @@ def CV_linreg(k_deg_fold, X, z):
     X = np.array_split(X, k_deg_fold) 
     z = np.array_split(z, k_deg_fold)
 
-    # array to keep track of MSE for each test-group
+    #array to keep track of MSE for each test-group and train-group
     MSE_train = np.zeros((k_deg_fold))
     MSE_test = np.zeros((k_deg_fold))
 
-    #step 3:
+    #step 3: for i in range of folds preform:
     for i in range(k_deg_fold):
         #a) pick one group to be test data
         X_test , z_test = X[i], z[i]
         
-        #b) take remaining groupe as train data
-        copy_X = X[:]
-        copy_X[0], copy_X[i] = copy_X[i], copy_X[0]
-        copy_z = z[:]
-        copy_z[0], copy_z[i] = copy_z[i], copy_z[0]
-        X_train = np.concatenate([m for m in copy_X[1:]])
-        z_train = np.concatenate([m for m in copy_z[1:]])
+        #b) take remaining groups as train data
+            #np.delete() creates a "new" array (does not alter X)
+            #concatenate merges remaining groups to train data
+        X_train = np.concatenate([m for m in np.delete(X, i, axis=0)])
+        z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
         
-        #c) fit model to train data with linreg
+        #c) fit model to train data with linreg and compute z_tilde 
         beta = linreg(X_train, z_train)
         z_tilde_test = X_test @ beta 
         z_tilde_train = X_train @ beta
 
-        #d) evaluate model and save score-value
+        #d) evaluate model and save score-value to MSE-arrays
         MSE_train[i] = MSE(z_train, z_tilde_train)
         MSE_test[i] = MSE(z_test, z_tilde_test)
-
+    
     return MSE_train, MSE_test
 
-def CV_losso(k_deg_fold, X, z, lambdan):
+def CV_lassoreg(k_deg_fold, X, z, lambdan):
+    "Preformes Cross-Validation with model=lassoreg, X=design-matrix"
+    "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
+    "np.mean() on output is estimated MSE with cross-validation"
+
     #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
     assert len(X) == len(z)
     p = np.random.permutation(len(X))
     X, z = X[p], z[p]
     
     #step 2: split the data in k groups with numpy.array_split
-    X = np.array_split(X, k_deg_fold); 
+    X = np.array_split(X, k_deg_fold) 
     z = np.array_split(z, k_deg_fold)
 
-    # array to keep track of MSE for each test-group
+    #array to keep track of MSE for each test-group and train-group
     MSE_train = np.zeros((k_deg_fold))
     MSE_test = np.zeros((k_deg_fold))
-    
-    #step 3:
+
+    #step 3: for i in range of folds preform:
     for i in range(k_deg_fold):
         #a) pick one group to be test data
         X_test , z_test = X[i], z[i]
         
-        #b) take remaining groupe as train data
-        copy_X = X[:]
-        copy_X[0], copy_X[i] = copy_X[i], copy_X[0]
-        copy_z = z[:]
-        copy_z[0], copy_z[i] = copy_z[i], copy_z[0]
-        X_train = np.concatenate([m for m in copy_X[1:]])
-        z_train = np.concatenate([m for m in copy_z[1:]])
+        #b) take remaining groups as train data
+            #np.delete() creates a "new" array (does not alter X)
+            #concatenate merges remaining groups to train data
+        X_train = np.concatenate([m for m in np.delete(X, i, axis=0)])
+        z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
 
-        #c) fit model to train data with linreg
+        #c) fit model to train data with lasso-reggresion 
         beta = lassoreg(X_train, z_train, lambdan)
 
         #d) evaluate model and save score-value
@@ -170,33 +174,36 @@ def CV_losso(k_deg_fold, X, z, lambdan):
 
     return MSE_train, MSE_test
 
-def CV_ridge(k_deg_fold, X, z, lambdan):
-     #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
+def CV_ridgereg(k_deg_fold, X, z, lambdan):
+    "Preformes Cross-Validation with model=ridgereg, X=design-matrix"
+    "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
+    "np.mean() on output is estimated MSE with cross-validation"
+
+    #step 1: shuffle datasets randomly using np.random.permutation(len(x)):
     assert len(X) == len(z)
     p = np.random.permutation(len(X))
     X, z = X[p], z[p]
-
+    
     #step 2: split the data in k groups with numpy.array_split
-    X = np.array_split(X, k_deg_fold); 
+    X = np.array_split(X, k_deg_fold) 
     z = np.array_split(z, k_deg_fold)
 
-    # array to keep track of MSE for each test-group
+    #array to keep track of MSE for each test-group and train-group
     MSE_train = np.zeros((k_deg_fold))
     MSE_test = np.zeros((k_deg_fold))
-    #step 3:
+
+    #step 3: for i in range of folds preform:
     for i in range(k_deg_fold):
         #a) pick one group to be test data
         X_test , z_test = X[i], z[i]
-
-        #b) take remaining groupe as train data
-        copy_X = X[:]
-        copy_X[0], copy_X[i] = copy_X[i], copy_X[0]
-        copy_z = z[:]
-        copy_z[0], copy_z[i] = copy_z[i], copy_z[0]
-        X_train = np.concatenate([m for m in copy_X[1:]])
-        z_train = np.concatenate([m for m in copy_z[1:]])
         
-        #c) fit model to train data with linreg
+        #b) take remaining groups as train data
+            #np.delete() creates a "new" array (does not alter X)
+            #concatenate merges remaining groups to train data
+        X_train = np.concatenate([m for m in np.delete(X, i, axis=0)])
+        z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
+        
+        #c) fit model to train data with ridge-reggresion
         beta = ridgereg(X_train, z_train, lambdan)
 
         #d) evaluate model and save score-value
@@ -246,7 +253,7 @@ if __name__ == "__main__":
 
     k_fold = 8
     lambdan = 0.4
-    MSE_arr = CV_linreg(k_fold, X, z)
+    MSE_arr = CV_ridgereg(k_fold, X, z, lambdan)
     print(MSE_arr)
 
     
