@@ -229,6 +229,20 @@ def bootstrap_ridge(X, z, B, lambdan):
         distribution[:, b] = beta_b
     return distribution
 
+def bootstrap_lasso(X, z, B, lambdan):
+    """Returns estimated distributions of beta estimators."""
+    n_datapoints = len(z)
+    
+    beta = lassoreg(X, z, lambdan)
+    distribution = np.zeros((len(beta), B))
+    for b in range(B):
+        datapoints = np.random.randint(0,n_datapoints,n_datapoints)
+        X_b = X[datapoints]
+        z_b = z[datapoints]
+        beta_b = lassoreg(X_b, z_b, lambdan)
+        distribution[:, b] = beta_b
+    return distribution
+
 if __name__ == "__main__":
     # Generating data
     N = 1000
@@ -252,8 +266,8 @@ if __name__ == "__main__":
     #plt.show()
 
     k_fold = 8
-    lambdan = 0.4
-    MSE_arr = CV_ridgereg(k_fold, X, z, lambdan)
+    lambdan = 0.0001
+    MSE_arr = bootstrap_lasso(X, z, 100, lambdan)
     print(MSE_arr)
 
     

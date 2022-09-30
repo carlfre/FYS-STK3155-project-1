@@ -292,14 +292,107 @@ def problem_e():
         plt.savefig(f"plots/Ridge_Cross_Validation_MSE_lambda_{l}.pdf")
         plt.show()
         plt.clf()
-        print("Generated train v test MSE plot")
+        print("Generated train v test MSE plot")   
 
 
+#ToDo clean up (titles, labels etc.)
 def problem_f():
     print("Problem f)")
+    #Preform c-d whith lasso-reggresion for different lambda
+    lambdas = np.array([0.00001, 0.001, 0.1, 10])
+    
+    np.random.seed(569)
+
+    # Generating data
+    N = 100
+    x = np.random.uniform(0, 1, N)
+    y = np.random.uniform(0, 1, N)
+    
+    sigma = 0.1
+    epsilon = np.random.normal(0, sigma)
+    z = rt.FrankeFunction(x, y) + epsilon
+
+    for l in lambdas:
+        # Plot train & test MSE for degree up to 20
+        degreerange = 10
+        degrees = range(1, degreerange + 1)
+        MSE_train = []
+        MSE_test = []
+
+        for deg in degrees:
+            X = rt.create_X_polynomial(x, y, deg)
+            X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
+            beta = rt.lassoreg(X_train, z_train, l)
+            ztilde_train = X_train @ beta
+            ztilde_test = X_test @ beta
+            
+            MSE_train.append(rt.MSE(z_train, ztilde_train))
+            MSE_test.append(rt.MSE(z_test, ztilde_test))
+
+        # Plotting MSE and R2 for all polynomial orders between 2 and 5
+        plt.plot(degrees, MSE_train, label="Train data MSE")
+        plt.plot(degrees, MSE_test, label="Test data MSE")
+        plt.xlabel("Polynomial degree")
+        plt.ylabel("Mean Square Error")
+        plt.title(f"Train and test MSE as a function of model complexity for lambda = {l}")
+        plt.legend()
+        plt.savefig(f"plots/Lasso_test_train_lambda_{l}.pdf")
+        plt.show()
+        plt.clf()
+        print("Generated train v test MSE plot")
+
+        # Bootstrap for bias-variance tradeoff analysis
+        B = 100
+        degrees = range(1, 11)
+        errors, biases, variances = [], [], []
+        for deg in degrees:
+            X = rt.create_X_polynomial(x, y, deg)
+            X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
+            distribution = rt.bootstrap_lasso(X_train, z_train, B, l)
+            z_pred = X_test @ distribution
+            error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
+            bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
+            variance = np.mean( np.var(z_pred, axis=1, keepdims=True) )
+            errors.append(error)
+            biases.append(bias)
+            variances.append(variance)
+        plt.plot(degrees, errors, label="Error")
+        plt.plot(degrees, biases, label="$Bias^2$")
+        plt.plot(degrees, variances, label="Variance")
+        plt.title(f"Error, Bias and Variances as function of model complexity for lambda = {l}")
+        plt.legend()
+        plt.savefig(f"plots/Lasso_error_bias_variance_lambda_{l}.pdf")
+        plt.show()
+        plt.clf()
+
+        # Plot train & test MSE for degree up to 20
+        k_fold_num = 5
+        degreerange = 10
+        degrees = range(1, degreerange + 1)
+        MSE_train = []
+        MSE_test = []
+
+        for deg in degrees:
+            X = rt.create_X_polynomial(x, y, deg)
+            MSECV_train, MSECV_test = rt.CV_lassoreg(k_fold_num, X, z, l)
+            MSE_train.append(np.mean(MSECV_train))
+            MSE_test.append(np.mean(MSECV_test))
+
+        # Plotting MSE and R2 for all polynomial orders between 2 and 5
+        plt.plot(degrees, MSE_train, label="Train data MSE")
+        plt.plot(degrees, MSE_test, label="Test data MSE")
+        plt.xlabel("Polynomial degree")
+        plt.ylabel("Mean Square Error")
+        plt.title(f"Train and test MSE as a function of model complexity - CV lambda {l}")
+        plt.legend()
+        plt.savefig(f"plots/Lasso_Cross_Validation_MSE_lambda_{l}.pdf")
+        plt.show()
+        plt.clf()
+        print("Generated train v test MSE plot") 
 
 def problem_g():
     print("Problem g)")
+    
 
 def main():
     problem_e()
