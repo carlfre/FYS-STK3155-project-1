@@ -73,7 +73,7 @@ def ridgereg(X, z, lambdan):
 #Lassso with scikit-learn:
 def lassoreg(X, z, lambdan):
     #Lasso regression with scikit-learn 
-    RegLasso = Lasso(lambdan)
+    RegLasso = Lasso(lambdan, fit_intercept = False)
     RegLasso.fit(X,z)
     beta_lasso = RegLasso.coef_
     return beta_lasso
