@@ -1,4 +1,5 @@
 # %%
+from math import degrees
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -96,7 +97,8 @@ def problem_d(tif_file):
     x = []
     y = []
     z = []
-    for N in range(150_000):
+    n = 150_000
+    for N in range(n + 1):
         x_val = np.random.randint(0, len(tif[0]))
         y_val = np.random.randint(0, len(tif))
         x.append(x_val)
@@ -108,7 +110,7 @@ def problem_d(tif_file):
 
     # Set parameters 
     k_fold_num = 5
-    degreerange = 25
+    degreerange = 15
     degrees = range(2, degreerange + 1)
     MSE_train = []
     MSE_test = []
@@ -136,10 +138,10 @@ def problem_d(tif_file):
     plt.plot(degrees, MSE_test, label="Test data MSE")
     plt.xlabel("Polynomial degree")
     plt.ylabel("Mean Square Error")
-    plt.title("Cross validation MSE as a function of \n polynomial degree for real life data")
+    plt.title(f"MSE as a function of polynomial degree \n Cross validation - [n={n}, kfold={k_fold_num}]")
     plt.legend()
+    plt.savefig(f"plots/Oppgave_g/D_linreg_degrange={degreerange}_N={n}_Kfold={k_fold_num}_CV_MSE.pdf")
     plt.show()
-    plt.savefig("plots/Oppgave_g/Cross_Validation_MSE_real_data.pdf")
     plt.clf()
     print("Generated train v test MSE plot")
 
@@ -148,14 +150,15 @@ def problem_e(tif_file):
     print("Problem e)")
     # Ridge 
     # Preform c-d whith ridge-reggresion for different lambda
-    lambdas = np.array([0.00001, 0.001, 0.1, 10])
+    lambdas = np.array([0.001, 0.01, 100, 10_000])
 
     #Random selection of points in tif
     tif = imread(tif_file)
     x = []
     y = []
     z = []
-    for N in range(1_000_000):
+    n = 150_000
+    for N in range(n):
         x_val = np.random.randint(0, len(tif[0]))
         y_val = np.random.randint(0, len(tif))
         x.append(x_val)
@@ -167,46 +170,62 @@ def problem_e(tif_file):
 
 
     for l in lambdas:
-        # Plot train & test MSE for degree up to 20
-        degreerange = 20
+        # Set parameters 
+        k_fold_num = 5
+        degreerange = 15
         degrees = range(2, degreerange + 1)
         MSE_train = []
         MSE_test = []
 
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
-            X_train, X_test, z_train, z_test = train_test_split(X, z, test_size=0.25)
-
             scaler = StandardScaler()
-            scaler.fit(X_train)
-            X_train = scaler.transform(X_train)
-            X_test = scaler.transform(X_test)
+            scaler.fit(X)
+            X_scaled = scaler.transform(X)
+            z_scaled = z - np.mean(z)
 
-            z_train = z_train - np.mean(z_train)
-            z_test = z_test - np.mean(z_test)
-
-            beta = rt.ridgereg(X_train, z_train, l)
-            ztilde_train = X_train @ beta
-            ztilde_test = X_test @ beta
-
-            MSE_train.append(rt.MSE(z_train, ztilde_train))
-            MSE_test.append(rt.MSE(z_test, ztilde_test))
+            MSECV_train, MSECV_test = rt.CV_ridgereg(k_fold_num, X_scaled, z_scaled, l)
+            MSE_train.append(np.mean(MSECV_train))
+            MSE_test.append(np.mean(MSECV_test))
 
         # Plotting MSE and R2 for all polynomial orders between 2 and 5
         plt.plot(degrees, MSE_train, label="Train data MSE")
         plt.plot(degrees, MSE_test, label="Test data MSE")
         plt.xlabel("Polynomial degree")
         plt.ylabel("Mean Square Error")
-        plt.title(f"Train and test MSE as a function of model complexity for lambda = {l}")
+        plt.title(f"MSE as a function of polynomial degree \n Cross validation w/Ridge - [lambda={l}, n={n}, kfold={k_fold_num}]")
         plt.legend()
-        #plt.savefig(f"plots/Ridge_test_train_lambda_{l}.pdf")
-        plt.show()
+        plt.savefig(f"plots/Oppgave_g/E_Ridge_lambda={l}_degrange={degreerange}_N={n}_Kfold={k_fold_num}_CV_MSE.pdf")
+        #plt.show()
         plt.clf()
         print("Generated train v test MSE plot")
 
 
+def problem_f(tif_file):
+    print("Problem e)")
+    # Lasso
+    # Preform c-d whith lasso-reggresion for different lambda
+    lambdas = np.array([0.001, 0.1 , 1, 10, 100, 10_000, 100_000])
 
-        # Plot train & test MSE for degree up to 20
+    #Random selection of points in tif
+    tif = imread(tif_file)
+    x = []
+    y = []
+    z = []
+    n = 10_000
+    for N in range(n):
+        x_val = np.random.randint(0, len(tif[0]))
+        y_val = np.random.randint(0, len(tif))
+        x.append(x_val)
+        y.append(y_val)
+        z.append(tif[y_val][x_val])
+    x = np.array(x)
+    y = np.array(y)
+    z = np.array(z)
+
+
+    for l in lambdas:
+        # Set parameters 
         k_fold_num = 5
         degreerange = 10
         degrees = range(2, degreerange + 1)
@@ -217,10 +236,10 @@ def problem_e(tif_file):
             X = rt.create_X_polynomial(x, y, deg)
             scaler = StandardScaler()
             scaler.fit(X)
-            X = scaler.transform(X)
-            z = z - np.mean(z)
+            X_scaled = scaler.transform(X)
+            z_scaled = z - np.mean(z)
 
-            MSECV_train, MSECV_test = rt.CV_ridgereg(k_fold_num, X, z, l)
+            MSECV_train, MSECV_test = rt.CV_lassoreg(k_fold_num, X_scaled, z_scaled, l)
             MSE_train.append(np.mean(MSECV_train))
             MSE_test.append(np.mean(MSECV_test))
 
@@ -229,28 +248,22 @@ def problem_e(tif_file):
         plt.plot(degrees, MSE_test, label="Test data MSE")
         plt.xlabel("Polynomial degree")
         plt.ylabel("Mean Square Error")
-        plt.title(f"Train and test MSE as a function of model complexity - CV lambda {l}")
+        plt.title(f"MSE as a function of polynomial degree \n Cross validation w/Lasso - [lambda={l}, n={n}, kfold={k_fold_num}]")
         plt.legend()
-        #plt.savefig(f"plots/Ridge_Cross_Validation_MSE_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_g/F_Lasso_lambda={l}_degrange={degreerange}_N={n}_Kfold={k_fold_num}_CV_MSE.pdf")
         plt.show()
         plt.clf()
         print("Generated train v test MSE plot")
 
 
-
-def problem_f(tif_file):
-    print("Problem e)")
-    # Preform c-d whith lasso-reggresion for different lambda
-    degrees = np.array([2, 4, 6, 8])
-
-    np.random.seed(569)
-
-    # Generating data
+def problem_f_inverse(tif_file):
+    #Random selection of points in tif
     tif = imread(tif_file)
     x = []
     y = []
     z = []
-    for N in range(10_000):
+    n = 20_000
+    for N in range(n):
         x_val = np.random.randint(0, len(tif[0]))
         y_val = np.random.randint(0, len(tif))
         x.append(x_val)
@@ -260,68 +273,38 @@ def problem_f(tif_file):
     y = np.array(y)
     z = np.array(z)
 
+    # Set parameters 
+    k_fold_num = 5
+    degrees = [2, 4, 6 ,8]
+    
     for deg in degrees:
-        # Plot train & test MSE for degree up to 20
-        lambdas = np.logspace(-6, 1)
-        MSE_train = []
-        MSE_test = []
-
         X = rt.create_X_polynomial(x, y, deg)
-        X_train, X_test, z_train, z_test = train_test_split(X, z, test_size=0.25)
-
-        scaler = StandardScaler()
-        scaler.fit(X_train)
-        X_train = scaler.transform(X_train)
-        X_test = scaler.transform(X_test)
-
-        z_train = z_train - np.mean(z_train)
-        z_test = z_test - np.mean(z_test)
-
-        for l in lambdas:
-            beta = rt.lassoreg(X_train, z_train, l)
-            ztilde_train = (X_train @ beta) + np.mean(z_train)
-            ztilde_test = (X_test @ beta) + np.mean(z_test)
-
-            MSE_train.append(rt.MSE(z_train, ztilde_train))
-            MSE_test.append(rt.MSE(z_test, ztilde_test))
-
-        # Plotting MSE and R2 for all polynomial orders between 2 and 5
-        plt.plot(np.log10(lambdas), MSE_train, label="Train data MSE")
-        plt.plot(np.log10(lambdas), MSE_test, label="Test data MSE")
-        plt.xlabel("Lambda")
-        plt.ylabel("Mean Square Error")
-        plt.title(f"Train and test MSE as a function of model complexity for degree = {deg}")
-        plt.legend()
-        # plt.savefig(f"plots/lasso_test_train_lambda_{l}.pdf")
-        plt.show()
-        plt.clf()
-        print("Generated train v test MSE plot")
-
-        # Plot train & test MSE for degree up to 20
-        k_fold_num = 5
-        MSE_train = []
-        MSE_test = []
         scaler = StandardScaler()
         scaler.fit(X)
-        X = scaler.transform(X)
-        z = z - np.mean(z)
+        X_scaled = scaler.transform(X)
+        z_scaled = z - np.mean(z)
 
-        for l in lambdas:
-            MSECV_train, MSECV_test = rt.CV_lassoreg(k_fold_num, X, z, l)
+
+        lambdalogspace = np.logspace(-3, 7)
+        MSE_train = []
+        MSE_test = []
+
+        for l in lambdalogspace:
+            MSECV_train, MSECV_test = rt.CV_lassoreg(k_fold_num, X_scaled, z_scaled, l)
             MSE_train.append(np.mean(MSECV_train))
             MSE_test.append(np.mean(MSECV_test))
 
         # Plotting MSE and R2 for all polynomial orders between 2 and 5
-        plt.plot(np.log10(lambdas), MSE_train, label="Train data MSE")
-        plt.plot(np.log10(lambdas), MSE_test, label="Test data MSE")
-        plt.xlabel("Lambda")
+        plt.plot(np.log10(lambdalogspace), MSE_train, label="Train data MSE")
+        plt.plot(np.log10(lambdalogspace), MSE_test, label="Test data MSE")
+        plt.xlabel("Log(lambda)")
         plt.ylabel("Mean Square Error")
-        plt.title(f"Train and test MSE as a function of model complexity - CV degree {deg}")
+        plt.title(f"MSE as a function of log(lambda) \n Cross validation w/Lasso - [poly_deg={deg}, n={n}, kfold={k_fold_num}]")
         plt.legend()
-        # plt.savefig(f"plots/lasso_Cross_Validation_MSE_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_g/F_inv_deg={deg}_N={n}_Kfold={k_fold_num}_CV_MSE.pdf")
         plt.show()
         plt.clf()
-
+        print("Generated train v test MSE plot")
 
 def problem_g():
     """Test on real data"""
@@ -338,7 +321,7 @@ def problem_g():
 
 
 def main():
-    problem_d(tif_file="src/SRTM_Saarland.tif")
+    problem_f_inverse(tif_file="src/SRTM_Saarland.tif")
 
 
 if __name__ == "__main__":
