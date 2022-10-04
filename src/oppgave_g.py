@@ -5,7 +5,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
 
-import Testing as rt
+import regression_tools as rt
 from imageio import imread
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
@@ -13,6 +13,8 @@ from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
 
 def problem_b(tif_file):
     print("Problem g) part b):")
+
+    #Random selection of points in tif
     tif = imread(tif_file)
     x = []
     y = []
@@ -44,18 +46,20 @@ def problem_b(tif_file):
     X = rt.create_X_polynomial(x, y, deg)
     X_train, X_test, z_train, z_test = train_test_split(X, z, test_size=0.25)
 
+    #Scale X data
     scaler = StandardScaler()
     scaler.fit(X_train)
     X_train_scaled = scaler.transform(X_train)
     X_test_scaled = scaler.transform(X_test)
 
+    #Scaled z_data(tif-data) after mean
     z_train_scaled = z_train - np.mean(z_train)
     z_test_scaled = z_test - np.mean(z_train)
 
-    # Estimate beta
+    # Estimate beta with scaled data
     beta = rt.linreg(X_train_scaled, z_train_scaled)
 
-    # Evaluate MSE and R2
+    # Use model to predict - ztilde and preform descaling
     ztilde_train = X_train_scaled @ beta + np.mean(z_train)
     ztilde_test = X_test_scaled @ beta + np.mean(z_train)
 
@@ -84,18 +88,15 @@ def problem_b(tif_file):
     print()
 
 
-
-
-
 def problem_d(tif_file):
-    print("Problem d)")
-    np.random.seed(569)
-
+    print("Problem d) in g)")
+    """Cross validation on data"""
+    #Random selection of points in tif
     tif = imread(tif_file)
     x = []
     y = []
     z = []
-    for N in range(10_000):
+    for N in range(150_000):
         x_val = np.random.randint(0, len(tif[0]))
         y_val = np.random.randint(0, len(tif))
         x.append(x_val)
@@ -105,9 +106,9 @@ def problem_d(tif_file):
     y = np.array(y)
     z = np.array(z)
 
-    # Plot train & test MSE for degree up to 20
+    # Set parameters 
     k_fold_num = 5
-    degreerange = 30
+    degreerange = 25
     degrees = range(2, degreerange + 1)
     MSE_train = []
     MSE_test = []
@@ -116,15 +117,17 @@ def problem_d(tif_file):
     print("Progress: 0%")
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
+
         scaler = StandardScaler()
         scaler.fit(X)
-        scaler.transform(X)
-        z = z - np.mean(z)
+        X_scaled = scaler.transform(X)
+        z_scaled = z - np.mean(z)
+
+
         progress = deg/degreerange * 100
         print(f"Progress: {round(progress, 2)}%")
 
-
-        MSECV_train, MSECV_test = rt.CV_linreg(k_fold_num, X, z)
+        MSECV_train, MSECV_test = rt.CV_linreg(k_fold_num, X_scaled, z_scaled)
         MSE_train.append(np.mean(MSECV_train))
         MSE_test.append(np.mean(MSECV_test))
 
@@ -133,27 +136,26 @@ def problem_d(tif_file):
     plt.plot(degrees, MSE_test, label="Test data MSE")
     plt.xlabel("Polynomial degree")
     plt.ylabel("Mean Square Error")
-    plt.title("Train and test MSE as a function of model complexity - CV")
+    plt.title("Cross validation MSE as a function of \n polynomial degree for real life data")
     plt.legend()
-    #plt.savefig("plots/Cross_Validation_MSE.pdf")
     plt.show()
+    plt.savefig("plots/Oppgave_g/Cross_Validation_MSE_real_data.pdf")
     plt.clf()
     print("Generated train v test MSE plot")
 
 
 def problem_e(tif_file):
     print("Problem e)")
+    # Ridge 
     # Preform c-d whith ridge-reggresion for different lambda
     lambdas = np.array([0.00001, 0.001, 0.1, 10])
 
-    np.random.seed(569)
-
-    # Generating data
+    #Random selection of points in tif
     tif = imread(tif_file)
     x = []
     y = []
     z = []
-    for N in range(120_000):
+    for N in range(1_000_000):
         x_val = np.random.randint(0, len(tif[0]))
         y_val = np.random.randint(0, len(tif))
         x.append(x_val)
@@ -163,9 +165,10 @@ def problem_e(tif_file):
     y = np.array(y)
     z = np.array(z)
 
+
     for l in lambdas:
         # Plot train & test MSE for degree up to 20
-        degreerange = 10
+        degreerange = 20
         degrees = range(2, degreerange + 1)
         MSE_train = []
         MSE_test = []
@@ -335,7 +338,7 @@ def problem_g():
 
 
 def main():
-    problem_b(tif_file="SRTM_Saarland.tif")
+    problem_d(tif_file="src/SRTM_Saarland.tif")
 
 
 if __name__ == "__main__":
