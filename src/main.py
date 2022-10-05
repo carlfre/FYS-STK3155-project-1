@@ -1,29 +1,25 @@
 #%%
 import matplotlib.pyplot as plt
 import numpy as np
-
+from imageio import imread
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 from sklearn.model_selection import  train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
 
 import regression_tools as rt
-from imageio import imread
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
+from analysis import generate_data_Franke
+
 
 
 def problem_b():
     print("Problem b)")
 
-    np.random.seed(199)
+    seed = 199
+    N = 400
+    sigma2 = 0.2 # Variance of noise
 
-    # Generating data
-    N = 1000
-    x = np.random.uniform(0, 1, N)
-    y = np.random.uniform(0, 1, N)
-
-    sigma = 1
-    epsilon = np.random.normal(0, sigma)  # Random noise to add to func
-    z = rt.FrankeFunction(x, y) + epsilon
+    x, y, z, _ = generate_data_Franke(N, sigma2, seed)
 
     # Create design matrix and train-test-split
     deg = 5 # degree of polynomial
@@ -31,7 +27,8 @@ def problem_b():
     X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
 
     # Estimate beta
-    beta = rt.linreg(X_train, z_train)
+    ols = rt.LinearRegression("ols")
+    beta = ols(X_train, z_train)
 
     # Evaluate MSE and R2
     ztilde_train = X_train @ beta
@@ -58,7 +55,7 @@ def problem_b():
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
         X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-        beta = rt.linreg(X_train, z_train)
+        beta = ols(X_train, z_train)
         beta_arr.append(beta)
         ztilde_test = X_test @ beta
 
@@ -71,14 +68,14 @@ def problem_b():
     plt.xlabel("Polynomial order")
     plt.ylabel("Mean Square Error")
     plt.title("Change in MSE with increasing polynomial order")
-    plt.savefig("../plots/Oppgave_b/MSE.pdf")
+    plt.savefig("plots/Oppgave_b/MSE.pdf")
     plt.show()
     plt.clf()
     plt.plot(degrees, R2_arr)
     plt.xlabel("Polynomial order")
     plt.ylabel("R2-score")
     plt.title("Change in R2 with increasing polynomial order")
-    plt.savefig("../plots/Oppgave_b/R2.pdf")
+    plt.savefig("plots/Oppgave_b/R2.pdf")
     plt.show()
     print("Generated MSE and R2 plots.")
     
@@ -90,7 +87,7 @@ def problem_b():
     plt.xlabel("Polynomial order")
     plt.ylabel("Coefficient value")
     plt.legend()
-    plt.savefig("../plots/Oppgave_b/beta.pdf")
+    plt.savefig("plots/Oppgave_b/beta.pdf")
     plt.show()
     print("Generated parameter value plot.")
 
@@ -98,16 +95,18 @@ def problem_b():
 
 def problem_c():
     print("Problem c)")
-    np.random.seed(569)
 
-    # Generating data
-    N = 100
-    x = np.random.uniform(0, 1, N)
-    y = np.random.uniform(0, 1, N)
-    
-    sigma = 0.1
-    epsilon = np.random.normal(0, sigma)
-    z = rt.FrankeFunction(x, y) + epsilon
+    # Set parameters
+    seed = 8892
+    N = 400
+    sigma2 = 0.2 # Variance of noise
+
+    # Generate data
+    x, y, z, _ = generate_data_Franke(N, sigma2, seed)
+
+    # Initialize model
+    ols = rt.LinearRegression("ols")
+
 
     # Plot train & test MSE for degree up to 10
     degreerange = 10
@@ -118,7 +117,7 @@ def problem_c():
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
         X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-        beta = rt.linreg(X_train, z_train)
+        beta = ols(X_train, z_train)
         ztilde_train = X_train @ beta
         ztilde_test = X_test @ beta
         
@@ -132,7 +131,7 @@ def problem_c():
     plt.ylabel("Mean Square Error")
     plt.title("Train and test MSE as a function of model complexity")
     plt.legend()
-    plt.savefig("../plots/Oppgave_c/train_v_test_MSE.pdf")
+    plt.savefig("plots/Oppgave_c/train_v_test_MSE.pdf")
     plt.show()
     plt.clf()
     print("Generated train v test MSE plot")
@@ -144,7 +143,7 @@ def problem_c():
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
         X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-        distribution = rt.bootstrap_linreg(X_train, z_train, B)
+        distribution = rt.bootstrap(X_train, z_train, B, ols)
         z_pred = X_test @ distribution
         error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
         bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
@@ -155,24 +154,21 @@ def problem_c():
     plt.plot(degrees, errors, label="Error")
     plt.plot(degrees, biases, label="$Bias^2$")
     plt.plot(degrees, variances, label="Variance")
-    plt.savefig("../plots/Oppgave_c/bias_variance_tradeoff.pdf")
+    plt.savefig("plots/Oppgave_c/bias_variance_tradeoff.pdf")
     plt.show()
     plt.clf()
 
 
-
 def problem_d():
     print("Problem d)")
-    np.random.seed(569)
+
+    seed = 569
+    N = 150
+    sigma2 = 1
 
     # Generating data
-    N = 150
-    x = np.random.uniform(0, 1, N)
-    y = np.random.uniform(0, 1, N)
-    
-    sigma = 1
-    epsilon = np.random.normal(0, sigma)  # Random noise to add to func
-    z = rt.FrankeFunction(x, y) + epsilon
+    x, y, z, _ = generate_data_Franke(N, seed, sigma2)
+    ols = rt.LinearRegression("ols")
 
     # Plot train & test MSE for degree up to 10
     k_fold_num = 5
@@ -183,7 +179,7 @@ def problem_d():
 
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
-        MSECV_train, MSECV_test = rt.CV_linreg(k_fold_num, X, z)
+        MSECV_train, MSECV_test = rt.cross_validation(X, z, k_fold_num, ols)
         MSE_train.append(np.mean(MSECV_train))
         MSE_test.append(np.mean(MSECV_test))
 
@@ -194,7 +190,7 @@ def problem_d():
     plt.ylabel("Mean Square Error")
     plt.title(f"Cross validation MSE as a function of polynomial degrees with N={N}")
     plt.legend()
-    plt.savefig(f"../plots/Oppgave_d/Cross_Validation_MSE_N={N}.pdf")
+    plt.savefig(f"plots/Oppgave_d/Cross_Validation_MSE_N={N}.pdf")
     plt.show()
     plt.clf()
     print("Generated train v test MSE plot")
@@ -239,7 +235,7 @@ def problem_e():
         plt.ylabel("Mean Square Error")
         plt.title(f"Ridge regression MSE as a function of polynomial degrees with lambda = {l}")
         plt.legend()
-        plt.savefig(f"../plots/Oppgave_e/Ridge_test_train_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_e/Ridge_test_train_lambda_{l}.pdf")
         plt.show()
         print("Generated train v test MSE plot")
 
@@ -263,7 +259,7 @@ def problem_e():
         plt.plot(degrees, variances, label="Variance")
         plt.title(f"Error, Bias and Variances as function of polynomial degrees for lambda = {l}")
         plt.legend()
-        plt.savefig(f"../plots/Oppgave_e/Ridge_error_bias_variance_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_e/Ridge_error_bias_variance_lambda_{l}.pdf")
         plt.show()
 
         # Plot train & test MSE for degree up to 10 with lambda l
@@ -286,7 +282,7 @@ def problem_e():
         plt.ylabel("Mean Square Error")
         plt.title(f"Cross validation MSE with ridge regression \n as a function of polynomial degrees with lambda {l}")
         plt.legend()
-        plt.savefig(f"../plots/Oppgave_e/Ridge_Cross_Validation_MSE_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_e/Ridge_Cross_Validation_MSE_lambda_{l}.pdf")
         plt.show()
         plt.clf()
         print("Generated train v test MSE plot")   
@@ -332,7 +328,7 @@ def problem_f():
         plt.ylabel("Mean Square Error")
         plt.title(f"Lasso regression MSE as a function of polynomial degrees for lambda = {l}")
         plt.legend()
-        plt.savefig(f"../plots/Oppgave_f/Lasso_test_train_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_f/Lasso_test_train_lambda_{l}.pdf")
         plt.show()
         print("Generated train v test MSE plot")
 
@@ -356,7 +352,7 @@ def problem_f():
         plt.plot(degrees, variances, label="Variance")
         plt.title(f"Error, Bias and Variances as function of model complexity for lambda = {l}")
         plt.legend()
-        plt.savefig(f"../plots/Oppgave_f/Lasso_error_bias_variance_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_f/Lasso_error_bias_variance_lambda_{l}.pdf")
         plt.show()
 
         # Plot train & test MSE for degree up to 10
@@ -379,7 +375,7 @@ def problem_f():
         plt.ylabel("Mean Square Error")
         plt.title(f"Cross validation MSE with lasso regression \n as a function of polynomial degrees with lambda {l}")
         plt.legend()
-        plt.savefig(f"../plots/Oppgave_f/Lasso_Cross_Validation_MSE_lambda_{l}.pdf")
+        plt.savefig(f"plots/Oppgave_f/Lasso_Cross_Validation_MSE_lambda_{l}.pdf")
         plt.show()
         plt.clf()
         print("Generated train v test MSE plot") 
@@ -399,8 +395,9 @@ def problem_g():
     
 
 def main():
-    problem_f()
+    problem_d()
 
 if __name__ == "__main__":
     main()
 # %%
+
