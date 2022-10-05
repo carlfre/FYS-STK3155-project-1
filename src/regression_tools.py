@@ -23,25 +23,20 @@ from sklearn.model_selection import train_test_split
 from sklearn.utils import shuffle
 
 
-# Defining functions
-
-def FrankeFunction(x, y):
-    term1 = 0.75 * np.exp(-(0.25 * (9 * x - 2) ** 2) - 0.25 * ((9 * y - 2) ** 2))
-    term2 = 0.75 * np.exp(-((9 * x + 1) ** 2) / 49.0 - 0.1 * (9 * y + 1))
-    term3 = 0.5 * np.exp(-(9 * x - 7) ** 2 / 4.0 - 0.25 * ((9 * y - 3) ** 2))
-    term4 = -0.2 * np.exp(-(9 * x - 4) ** 2 - (9 * y - 7) ** 2)
-    return term1 + term2 + term3 + term4
-
-
 def R2(y_data, y_model):
+    """Computes R^2-score."""
     return 1 - np.sum((y_data - y_model) ** 2) / np.sum((y_data - np.mean(y_data)) ** 2)
 
 
 def MSE(y_data, y_model):
+    """Computes mean squared error."""
     n = np.size(y_model)
     return np.sum((y_data - y_model) ** 2) / n
 
+
 def create_X_polynomial(x, y, n):
+    """Computes the design matrix for a degree n polynomial in variables
+    x and y."""
     if len(x.shape) > 1:
         x = np.ravel(x)
         y = np.ravel(y)
@@ -58,14 +53,74 @@ def create_X_polynomial(x, y, n):
     return X
 
 
-def linreg(X, z):
+class LinearRegression:
+
+    def __init__(self, modeltype="ols", lambdan=None):
+        """Initialize the model type and set lambda parameter
+        if required.
+        
+        Parameters
+        ----------
+        modeltype: str
+            must be either 
+                'ols'   (for Ordinary Least Squares regression)
+                'ridge' (for Ridge regression)
+                'lasso' (for Lasso regression)
+        lambdan: None /float
+            For ols, this parameter is None
+            For ridgeg/lasso this parameter is in [0, +inf)
+        """
+        modeltype = modeltype.lower()
+        if modeltype not in ["ols", "ridge", "lasso"]:
+            raise ValueError("Model must be ols/ridge/lasso")
+        
+        if modeltype == "ols":
+            if lambdan != None:
+                raise ValueError("ols model has no parameter lambdan")
+        elif modeltype in ["ridge", "lasso"]:
+            if lambdan == None:
+                raise ValueError(f"{modeltype} requires parameter lambdan")
+        
+        self._model = modeltype
+        self._lambda = lambdan
+    
+    def __call__(self, X, z):
+        """Estimates beta parameter using stored model type.
+
+        Parameters
+        ----------
+        X: np.ndarray
+            Design matrix
+        z: np.ndarray
+            Dependent variable
+        
+        Returns
+        -------
+        beta_hat: np.ndarray
+            Estimated beta parameters
+        """
+        if self._model == "ols":
+            beta_hat =  ols_regression(X, z)
+        elif self._model == "ridge":
+            beta_hat = ridge_regression(X, z, self._lambda)
+        elif self._model == "lasso":
+            beta_hat = lasso_regression(X, z, self._lambda)
+        else:
+            raise RuntimeError("Could not find model")
+        
+        return beta_hat
+
+
+def ols_regression(X, z):
+    """Performs Ordinary Least Squares regression to estimate
+    beta parameters."""
     # Solving for beta
     beta = np.linalg.pinv(X.T @ X) @ X.T @ z
     return beta
 
 
-# Ridge regression
-def ridgereg(X, z, lambdan):
+def ridge_regression(X, z, lambdan):
+    """Performs Ridge regression to estimate beta parameters."""
     # create identity matrix
     I = np.eye(len(X.T), len(X.T))
 
@@ -75,7 +130,8 @@ def ridgereg(X, z, lambdan):
 
 
 # Lassso with scikit-learn:
-def lassoreg(X, z, lambdan):
+def lasso_regression(X, z, lambdan):
+    """Performs Lasso regression to estimate beta parameters."""
     # Lasso regression with scikit-learn
     RegLasso = Lasso(lambdan, fit_intercept=False)
     RegLasso.fit(X, z)
@@ -83,23 +139,41 @@ def lassoreg(X, z, lambdan):
     return beta_lasso
 
 
-def bootstrap_linreg(X, z, B):
-    """Returns estimated distributions of beta estimators."""
+def bootstrap(X, z, B, model):
+    """Returns estimated distributions of beta estimators.
+    
+    Parameters
+    ----------
+    model: LinearRegression object
+        Either OLS, Ridge, or Lasso regression
+    X: np.ndarray
+        Design matrix
+    z: np.ndarray
+        Dependent variable
+    B: int
+        Number of bootstrap iterations
+
+    Returns
+    -------
+    distribution: np.ndarray
+        An array of dimensions (len(beta), B) where distribution[:, b]
+        are the parameters beta estimated at the b'th bootstrap iteration
+    """
     t = np.zeros(B)
     n_datapoints = len(z)
 
-    beta = linreg(X, z)
+    beta = model(X, z)
     distribution = np.zeros((len(beta), B))
     for b in range(B):
         datapoints = np.random.randint(0, n_datapoints, n_datapoints)
         X_b = X[datapoints]
         z_b = z[datapoints]
-        beta_b = linreg(X_b, z_b)
+        beta_b = model(X_b, z_b)
         distribution[:, b] = beta_b
     return distribution
 
 
-def CV_linreg(k_deg_fold, X, z):
+def cross_validation(X, z, k_deg_fold, model):
     "Preformes Cross-Validation with model=linreg, X=design-matrix"
     "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
     "np.mean() on output is estimated MSE with cross-validation"
@@ -129,7 +203,7 @@ def CV_linreg(k_deg_fold, X, z):
         z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
 
         # c) fit model to train data with linreg and compute z_tilde
-        beta = linreg(X_train, z_train)
+        beta = model(X_train, z_train)
         z_tilde_test = X_test @ beta
         z_tilde_train = X_train @ beta
 
@@ -140,142 +214,43 @@ def CV_linreg(k_deg_fold, X, z):
     return MSE_train, MSE_test
 
 
-def CV_lassoreg(k_deg_fold, X, z, lambdan):
-    "Preformes Cross-Validation with model=lassoreg, X=design-matrix"
-    "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
-    "np.mean() on output is estimated MSE with cross-validation"
-
-    # step 1: shuffle datasets randomly using np.random.permutation(len(x)):
-    assert len(X) == len(z)
-    p = np.random.permutation(len(X))
-    X, z = X[p], z[p]
-
-    # step 2: split the data in k groups with numpy.array_split
-    X = np.array_split(X, k_deg_fold)
-    z = np.array_split(z, k_deg_fold)
-
-    # array to keep track of MSE for each test-group and train-group
-    MSE_train = np.zeros((k_deg_fold))
-    MSE_test = np.zeros((k_deg_fold))
-
-    # step 3: for i in range of folds preform:
-    for i in range(k_deg_fold):
-        # a) pick one group to be test data
-        X_test, z_test = X[i], z[i]
-
-        # b) take remaining groups as train data
-        # np.delete() creates a "new" array (does not alter X)
-        # concatenate merges remaining groups to train data
-        X_train = np.concatenate([m for m in np.delete(X, i, axis=0)])
-        z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
-
-        # c) fit model to train data with lasso-reggresion
-        beta = lassoreg(X_train, z_train, lambdan)
-
-        # d) evaluate model and save score-value
-        z_tilde_test = X_test @ beta
-        z_tilde_train = X_train @ beta
-
-        MSE_train[i] = MSE(z_train, z_tilde_train)
-        MSE_test[i] = MSE(z_test, z_tilde_test)
-
-    return MSE_train, MSE_test
-
-
-def CV_ridgereg(k_deg_fold, X, z, lambdan):
-    "Preformes Cross-Validation with model=ridgereg, X=design-matrix"
-    "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
-    "np.mean() on output is estimated MSE with cross-validation"
-
-    # step 1: shuffle datasets randomly using np.random.permutation(len(x)):
-    assert len(X) == len(z)
-    p = np.random.permutation(len(X))
-    X, z = X[p], z[p]
-
-    # step 2: split the data in k groups with numpy.array_split
-    X = np.array_split(X, k_deg_fold)
-    z = np.array_split(z, k_deg_fold)
-
-    # array to keep track of MSE for each test-group and train-group
-    MSE_train = np.zeros((k_deg_fold))
-    MSE_test = np.zeros((k_deg_fold))
-
-    # step 3: for i in range of folds preform:
-    for i in range(k_deg_fold):
-        # a) pick one group to be test data
-        X_test, z_test = X[i], z[i]
-
-        # b) take remaining groups as train data
-        # np.delete() creates a "new" array (does not alter X)
-        # concatenate merges remaining groups to train data
-        X_train = np.concatenate([m for m in np.delete(X, i, axis=0)])
-        z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
-
-        # c) fit model to train data with ridge-reggresion
-        beta = ridgereg(X_train, z_train, lambdan)
-
-        # d) evaluate model and save score-value
-        z_tilde_test = X_test @ beta
-        z_tilde_train = X_train @ beta
-
-        MSE_train[i] = MSE(z_train, z_tilde_train)
-        MSE_test[i] = MSE(z_test, z_tilde_test)
-
-    return MSE_train, MSE_test
-
-
-def bootstrap_ridge(X, z, B, lambdan):
-    """Returns estimated distributions of beta estimators."""
-    n_datapoints = len(z)
-
-    beta = ridgereg(X, z, lambdan)
-    distribution = np.zeros((len(beta), B))
-    for b in range(B):
-        datapoints = np.random.randint(0, n_datapoints, n_datapoints)
-        X_b = X[datapoints]
-        z_b = z[datapoints]
-        beta_b = ridgereg(X_b, z_b, lambdan)
-        distribution[:, b] = beta_b
-    return distribution
-
-
-def bootstrap_lasso(X, z, B, lambdan):
-    """Returns estimated distributions of beta estimators."""
-    n_datapoints = len(z)
-
-    beta = lassoreg(X, z, lambdan)
-    distribution = np.zeros((len(beta), B))
-    for b in range(B):
-        datapoints = np.random.randint(0, n_datapoints, n_datapoints)
-        X_b = X[datapoints]
-        z_b = z[datapoints]
-        beta_b = lassoreg(X_b, z_b, lambdan)
-        distribution[:, b] = beta_b
-    return distribution
-
-
 if __name__ == "__main__":
     # Generating data
-    N = 1000
-    x = np.random.uniform(0, 1, N)
-    y = np.random.uniform(0, 1, N)
-    z = FrankeFunction(x, y)
+    from analysis import generate_data_Franke
+    seed = 898
+    N = 100
+    sigma2 = 0
+
+    x, y, z, _ = generate_data_Franke(N, sigma2, seed)
+    
 
     # Fit an n-degree polynomial
     n = 5
     X = create_X_polynomial(x, y, n)
-    beta = linreg(X, z)
+    model = LinearRegression("lasso", 1)
+    
+    
+    beta = model(X, z)
+    
     ztilde = X @ beta
-
-    B = 100
-    distribution = bootstrap_linreg(X, z, B)
-
+    
+    plt.scatter(x,z, c='b')
+    plt.scatter(x, ztilde, c='r')
+    plt.show()
+    
+    B = 400
+    distribution = bootstrap(X, z, B, model)
+    
     # Plots estimated distribution for the i'th parameter of the model
-    i = -1
+    i = 1
+    print(max(distribution[i, :]))
     plt.hist(distribution[i, :])
-    # plt.show()
-
+    plt.show()
+    
     k_fold = 8
     lambdan = 0.0001
-    MSE_arr = bootstrap_lasso(X, z, 100, lambdan)
-    print(MSE_arr)
+    MSE_train, MSE_test = cross_validation(X, z, k_fold, model)
+    print(MSE_train, MSE_test)
+    #print(MSE_arr)
+    
+    
