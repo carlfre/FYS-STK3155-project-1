@@ -98,8 +98,8 @@ def problem_c():
 
     # Set parameters
     seed = 8892
-    N = 400
-    sigma2 = 0.2 # Variance of noise
+    N = 1000
+    sigma2 = 0.4 # Variance of noise
 
     # Generate data
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
@@ -109,7 +109,7 @@ def problem_c():
 
 
     # Plot train & test MSE for degree up to 10
-    degreerange = 10
+    degreerange = 20
     degrees = range(1, degreerange + 1)
     MSE_train = []
     MSE_test = []
@@ -138,7 +138,7 @@ def problem_c():
 
     # Bootstrap for bias-variance tradeoff analysis
     B = 100
-    degrees = range(1, 11)
+    degrees = range(1, degreerange + 1)
     errors, biases, variances = [], [], []
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
@@ -154,6 +154,7 @@ def problem_c():
     plt.plot(degrees, errors, label="Error")
     plt.plot(degrees, biases, label="$Bias^2$")
     plt.plot(degrees, variances, label="Variance")
+    plt.legend()
     plt.savefig("plots/Oppgave_c/bias_variance_tradeoff.pdf")
     plt.show()
     plt.clf()
@@ -198,18 +199,17 @@ def problem_d():
 
 def problem_e():
     print("Problem e)")
+
+    # Set parameters
+    seed = 8443
+    N = 100
+    sigma2 = 1 # Variance of noise
+
+    # Generate data
+    x, y, z, _ = generate_data_Franke(N, sigma2, seed)
+
     #Preform task c-d with ridge-regression for different lambdas
     lambdas = np.array([0.00001, 0.001, 0.1, 10])
-    np.random.seed(569)
-
-    # Generating data
-    N = 100
-    x = np.random.uniform(0, 1, N)
-    y = np.random.uniform(0, 1, N)
-    
-    sigma = 1
-    epsilon = np.random.normal(0, sigma)  # Add random noise to func
-    z = rt.FrankeFunction(x, y) + epsilon
 
     for l in lambdas:
         # Plot train & test MSE for degree up to 10
@@ -218,10 +218,12 @@ def problem_e():
         MSE_train = []
         MSE_test = []
 
+        ridge = rt.LinearRegression("ridge", l)
+
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
             X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-            beta = rt.ridgereg(X_train, z_train, l)
+            beta = ridge(X_train, z_train)
             ztilde_train = X_train @ beta
             ztilde_test = X_test @ beta
             
@@ -246,7 +248,7 @@ def problem_e():
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
             X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-            distribution = rt.bootstrap_ridge(X_train, z_train, B, l)
+            distribution = rt.bootstrap(X_train, z_train, B, ridge)
             z_pred = X_test @ distribution
             error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
             bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
@@ -271,7 +273,7 @@ def problem_e():
 
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
-            MSECV_train, MSECV_test = rt.CV_ridgereg(k_fold_num, X, z, l)
+            MSECV_train, MSECV_test = rt.cross_validation(X, z, k_fold_num, ridge)
             MSE_train.append(np.mean(MSECV_train))
             MSE_test.append(np.mean(MSECV_test))
 
@@ -290,19 +292,17 @@ def problem_e():
 
 def problem_f():
     print("Problem f)")
+
+    # Set parameters
+    seed = 4327
+    N = 10000
+    sigma2 = 1 # Variance of noise
+
+    # Generate data
+    x, y, z, _ = generate_data_Franke(N, sigma2, seed)
+
     #Preform task c-d with lasso-regression for different lambdas
     lambdas = np.array([0.00001, 0.001, 0.1, 10])
-    
-    np.random.seed(569)
-
-    # Generating data
-    N = 1000
-    x = np.random.uniform(0, 1, N)
-    y = np.random.uniform(0, 1, N)
-    
-    sigma = 1
-    epsilon = np.random.normal(0, sigma)  # Add random noise to func
-    z = rt.FrankeFunction(x, y) + epsilon
 
     for l in lambdas:
         # Plot train & test MSE for degree up to 10
@@ -311,10 +311,12 @@ def problem_f():
         MSE_train = []
         MSE_test = []
 
+        lasso = rt.LinearRegression("lasso", l)
+
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
             X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-            beta = rt.lassoreg(X_train, z_train, l)
+            beta = lasso(X_train, z_train)
             ztilde_train = X_train @ beta
             ztilde_test = X_test @ beta
             
@@ -339,7 +341,7 @@ def problem_f():
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
             X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-            distribution = rt.bootstrap_lasso(X_train, z_train, B, l)
+            distribution = rt.bootstrap(X_train, z_train, B, lasso)
             z_pred = X_test @ distribution
             error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
             bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
@@ -364,7 +366,7 @@ def problem_f():
 
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
-            MSECV_train, MSECV_test = rt.CV_lassoreg(k_fold_num, X, z, l)
+            MSECV_train, MSECV_test = rt.cross_validation(X, z, k_fold_num, lasso)
             MSE_train.append(np.mean(MSECV_train))
             MSE_test.append(np.mean(MSECV_test))
 
@@ -395,7 +397,7 @@ def problem_g():
     
 
 def main():
-    problem_d()
+    problem_f()
 
 if __name__ == "__main__":
     main()
