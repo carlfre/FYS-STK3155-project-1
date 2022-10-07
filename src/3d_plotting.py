@@ -35,6 +35,7 @@ def scatter_plot():
     ax.set_zlabel('z')
     plt.show()
 
+
 def plot_3d(X, Y, Z, title="", filename=""):
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -58,31 +59,29 @@ def plot_Franke(filename=""):
 
     plot_3d(X, Y, Z, title="Franke function", filename=filename)
 
-def evaluate_at_xy(x, y, n):
-    X = np.ones(((n+1) * (n+2) // 2 ))
-
-    for i in range(1, n + 1):
-        q = i * (i + 1) // 2
-        for k in range(i + 1):
-            X[q + k] = (x ** (i - k)) * (y ** k)
-    return X
-
 
 def plot_estimated_environment(model_type="ols", n=5, lmbda=None, save=False):
+    from sklearn.preprocessing import StandardScaler
+    
     # estimate beta
     seed = 38748
     N = 400
     sigma2 = 0.1
 
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
-    #z -= np.mean(z)
+    #z_mean = np.mean(z)
+    #z -= 
 
     # Use linear regression
     model = rt.LinearRegression(model_type, lmbda)
 
     # Fit an n-degree polynomial
-    
     X = rt.create_X_polynomial(x, y, n)
+
+    #scaler = StandardScaler()
+    #scaler.fit(X)
+    #X = scaler.transform(X)
+
     beta = model(X, z)
 
     # create a grid of points to evaluate the model at
@@ -91,11 +90,15 @@ def plot_estimated_environment(model_type="ols", n=5, lmbda=None, save=False):
     ystar = np.linspace(0, 1, M)
 
     X, Y = np.meshgrid(xstar, ystar)
-    Z = np.zeros_like(X)
-    nx, ny = X.shape
-    for i in range(nx):
-        for j in range(ny):
-            Z[i, j] = evaluate_at_xy(X[i, j], Y[i, j], n) @ beta
+    ny, nx = X.shape
+    X_star = X.flatten()
+    Y_star = Y.flatten()
+    design = rt.create_X_polynomial(X_star, Y_star, n)
+
+    #design = scaler.transform(design)
+
+    Z_star = design @ beta
+    Z = Z_star.reshape((ny, nx))
 
 
     # Plot the data in 3D
@@ -112,10 +115,11 @@ def plot_estimated_environment(model_type="ols", n=5, lmbda=None, save=False):
 
 def main():
     plot_estimated_environment("ols", 5,)
-    plot_estimated_environment("ridge", 5, lmbda=1e-4)
-    plot_estimated_environment("lasso", 5, lmbda=1e-6)
+    plot_estimated_environment("ridge", 5, lmbda=1e-10)
+    plot_estimated_environment("lasso", 5, lmbda=1e-5)
     plot_Franke()
 
 
 if __name__ == "__main__":
     main()
+# %%
