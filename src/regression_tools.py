@@ -20,7 +20,7 @@ from sklearn.linear_model import Lasso
 from sklearn.model_selection import cross_val_score
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle
+from sklearn.utils import shuffle, resample
 
 
 def R2(y_data, y_model):
@@ -178,6 +178,56 @@ def bootstrap(X, z, B, model):
         beta_b = model(X_b, z_b)
         distribution[:, b] = beta_b
     return distribution
+
+def bootstrap(x, y, z, deg, model, B, test_size=0.25):
+    """Returns estimated distributions of beta estimators.
+    
+    Parameters
+    ----------
+    model: LinearRegression object
+        Either OLS, Ridge, or Lasso regression
+    x: np.ndarray
+        x-coordinates
+    y: np.ndarray
+        y-coordinates
+    z: np.ndarray
+        Dependent variable
+    deg: int
+        Polynomial degree used for regression
+    model: LinearRegression
+        Linear regression model used, either ols, ridge, or lasso
+    B: int
+        Number of bootstrap iterations
+    test_size: float
+        Proportion of data used as test set
+
+    Returns
+    -------
+    bias: float
+        Estimated bias
+    variance: float
+        Estimated variance
+    error: float
+        Test set error
+    """
+    x = x.reshape(-1, 1)
+    y = y.reshape(-1, 1)
+
+    X = create_X_polynomial(x, y, deg)
+    X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=test_size)
+    z_train = z_train.reshape(-1, 1)
+    z_test = z_test.reshape(-1, 1)
+
+    z_pred = np.empty((z_test.shape[0], B))
+    for i in range(B):
+        X_, z_ = resample(X_train, z_train)
+        z_pred[:,i] = X_test @ (model(X_, z_)).ravel()
+
+
+    bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2)
+    variance = np.mean( np.var(z_pred, axis=1, keepdims=True))
+    error = np.mean( np.mean((z_test - z_pred)**2, axis=1, keepdims=True) )
+    return bias, variance, error
 
 
 def cross_validation(X, z, k_deg_fold, model):
