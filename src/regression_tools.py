@@ -109,6 +109,13 @@ class LinearRegression:
             raise RuntimeError("Could not find model")
         
         return beta_hat
+    def __str__(self):
+        name = {
+            "ols": "Ordinary Least Squares Regression", 
+            "ridge": "Ridge Regression", 
+            "lasso": "Lasso Regression"
+            }
+        return name[self._model]
 
 
 def ols_regression(X, z):
@@ -133,7 +140,7 @@ def ridge_regression(X, z, lambdan):
 def lasso_regression(X, z, lambdan):
     """Performs Lasso regression to estimate beta parameters."""
     # Lasso regression with scikit-learn
-    RegLasso = Lasso(lambdan, fit_intercept=False)
+    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=int(1e7))
     RegLasso.fit(X, z)
     beta_lasso = RegLasso.coef_
     return beta_lasso
