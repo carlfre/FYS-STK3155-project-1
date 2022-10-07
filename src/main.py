@@ -1,4 +1,5 @@
 #%%
+from queue import Empty
 import matplotlib.pyplot as plt
 import numpy as np
 from imageio import imread
@@ -6,6 +7,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 from sklearn.model_selection import  train_test_split
 from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
+from sklearn.utils import resample
 
 import regression_tools as rt
 from analysis import generate_data_Franke
@@ -97,19 +99,21 @@ def problem_c():
     print("Problem c)")
 
     # Set parameters
-    seed = 8892
-    N = 1000
-    sigma2 = 0.4 # Variance of noise
+    N = 40
+    B = 100 # n_bootsraps 
+    degreerange = 5
+    
+    sigma2 = 0.1 # Variance of noise
+    seed = 112
 
     # Generate data
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
+    x = x.reshape(-1, 1); y = y.reshape(-1, 1)
 
     # Initialize model
     ols = rt.LinearRegression("ols")
 
-
     # Plot train & test MSE for degree up to 10
-    degreerange = 20
     degrees = range(1, degreerange + 1)
     MSE_train = []
     MSE_test = []
@@ -137,23 +141,31 @@ def problem_c():
     print("Generated train v test MSE plot")
 
     # Bootstrap for bias-variance tradeoff analysis
-    B = 100
-    degrees = range(1, degreerange + 1)
-    errors, biases, variances = [], [], []
+    degrees = range(degreerange)
+    errors = np.zeros(degreerange)
+    variances = np.zeros(degreerange)
+    biases = np.zeros(degreerange)
+    polydeg = np.zeros(degreerange)
+
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
         X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-        distribution = rt.bootstrap(X_train, z_train, B, ols)
-        z_pred = X_test @ distribution
-        error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
-        bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
-        variance = np.mean( np.var(z_pred, axis=1, keepdims=True) )
-        errors.append(error)
-        biases.append(bias)
-        variances.append(variance)
-    plt.plot(degrees, errors, label="Error")
-    plt.plot(degrees, biases, label="$Bias^2$")
-    plt.plot(degrees, variances, label="Variance")
+        z_train = z_train.reshape(-1, 1)
+        z_test = z_test.reshape(-1, 1)
+
+        z_pred = np.empty((z_test.shape[0], B))
+        for i in range(B):
+            X_, z_ = resample(X_train, z_train)
+            z_pred[:,i] = X_test @ (ols(X_, z_)).ravel()
+
+        polydeg[deg] = deg
+        errors[deg] = np.mean( np.mean((z_test - z_pred)**2, axis=1, keepdims=True) )
+        biases[deg] = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2)
+        variances[deg] = np.mean( np.var(z_pred, axis=1, keepdims=True))
+
+    plt.plot(polydeg, errors, label="Error")
+    plt.plot(polydeg, biases, label="$Bias^2$")
+    plt.plot(polydeg, variances, label="Variance")
     plt.legend()
     plt.savefig("plots/Oppgave_c/bias_variance_tradeoff.pdf")
     plt.show()
@@ -397,7 +409,7 @@ def problem_g():
     
 
 def main():
-    problem_f()
+    problem_c()
 
 if __name__ == "__main__":
     main()
