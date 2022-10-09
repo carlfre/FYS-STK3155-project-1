@@ -19,7 +19,7 @@ def problem_b():
 
     seed = 199
     N = 400
-    sigma2 = 0.2 # Variance of noise
+    sigma2 = 0.1 # Variance of noise
 
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
 
@@ -62,7 +62,6 @@ def problem_b():
         ztilde_test = X_test @ beta
 
         R2_arr.append(rt.R2(z_test, ztilde_test))
-        
         MSE_arr.append(rt.MSE(z_test, ztilde_test))
 
     # Plotting MSE and R2 for all polynomial orders between 2 and 5
@@ -99,16 +98,15 @@ def problem_c():
     print("Problem c)")
 
     # Set parameters
-    N = 40
+    N = 1000
     B = 100 # n_bootsraps 
-    degreerange = 5
+    degreerange = 20
     
     sigma2 = 0.1 # Variance of noise
-    seed = 112
+    seed = 132
 
     # Generate data
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
-    x = x.reshape(-1, 1); y = y.reshape(-1, 1)
 
     # Initialize model
     ols = rt.LinearRegression("ols")
@@ -141,31 +139,17 @@ def problem_c():
     print("Generated train v test MSE plot")
 
     # Bootstrap for bias-variance tradeoff analysis
-    degrees = range(degreerange)
-    errors = np.zeros(degreerange)
-    variances = np.zeros(degreerange)
-    biases = np.zeros(degreerange)
-    polydeg = np.zeros(degreerange)
-
+    degrees = list(range(1, degreerange + 1))
+    biases, variances, errors = [], [], []
     for deg in degrees:
-        X = rt.create_X_polynomial(x, y, deg)
-        X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-        z_train = z_train.reshape(-1, 1)
-        z_test = z_test.reshape(-1, 1)
+        bias, variance, error = rt.bootstrap(x, y, z, deg, ols, B)
+        biases.append(bias)
+        variances.append(variance)
+        errors.append(error)
 
-        z_pred = np.empty((z_test.shape[0], B))
-        for i in range(B):
-            X_, z_ = resample(X_train, z_train)
-            z_pred[:,i] = X_test @ (ols(X_, z_)).ravel()
-
-        polydeg[deg] = deg
-        errors[deg] = np.mean( np.mean((z_test - z_pred)**2, axis=1, keepdims=True) )
-        biases[deg] = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2)
-        variances[deg] = np.mean( np.var(z_pred, axis=1, keepdims=True))
-
-    plt.plot(polydeg, errors, label="Error")
-    plt.plot(polydeg, biases, label="$Bias^2$")
-    plt.plot(polydeg, variances, label="Variance")
+    plt.plot(degrees, biases, label="Bias^2$")
+    plt.plot(degrees, variances, label="Variance")
+    plt.plot(degrees, errors, label="Error")
     plt.legend()
     plt.savefig("plots/Oppgave_c/bias_variance_tradeoff.pdf")
     plt.show()
@@ -215,7 +199,7 @@ def problem_e():
     # Set parameters
     seed = 8443
     N = 100
-    sigma2 = 1 # Variance of noise
+    sigma2 = 0.1 # Variance of noise
 
     # Generate data
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
@@ -255,19 +239,15 @@ def problem_e():
 
         # Bootstrap for bias-variance tradeoff analysis
         B = 100
-        degrees = range(1, 11)
-        errors, biases, variances = [], [], []
+        degreerange = 10
+        degrees = list(range(1, degreerange + 1))
+        biases, variances, errors = [], [], []
         for deg in degrees:
-            X = rt.create_X_polynomial(x, y, deg)
-            X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-            distribution = rt.bootstrap(X_train, z_train, B, ridge)
-            z_pred = X_test @ distribution
-            error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
-            bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
-            variance = np.mean( np.var(z_pred, axis=1, keepdims=True) )
-            errors.append(error)
+            bias, variance, error = rt.bootstrap(x, y, z, deg, ridge, B)
             biases.append(bias)
             variances.append(variance)
+            errors.append(error)
+
         plt.plot(degrees, errors, label="Error")
         plt.plot(degrees, biases, label="$Bias^2$")
         plt.plot(degrees, variances, label="Variance")
@@ -307,8 +287,8 @@ def problem_f():
 
     # Set parameters
     seed = 4327
-    N = 10000
-    sigma2 = 1 # Variance of noise
+    N = 100
+    sigma2 = 0.1 # Variance of noise
 
     # Generate data
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
@@ -348,19 +328,15 @@ def problem_f():
 
         # Bootstrap for bias-variance tradeoff analysis
         B = 100
-        degrees = range(1, 11)
-        errors, biases, variances = [], [], []
+        degreerange = 10
+        degrees = list(range(1, degreerange + 1))
+        biases, variances, errors = [], [], []
         for deg in degrees:
-            X = rt.create_X_polynomial(x, y, deg)
-            X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
-            distribution = rt.bootstrap(X_train, z_train, B, lasso)
-            z_pred = X_test @ distribution
-            error = np.mean( np.mean((z_test.reshape(-1, 1) - z_pred)**2, axis=1, keepdims=True) )
-            bias = np.mean( (z_test - np.mean(z_pred, axis=1, keepdims=True))**2 )
-            variance = np.mean( np.var(z_pred, axis=1, keepdims=True) )
-            errors.append(error)
+            bias, variance, error = rt.bootstrap(x, y, z, deg, lasso, B)
             biases.append(bias)
             variances.append(variance)
+            errors.append(error)
+
         plt.plot(degrees, errors, label="Error")
         plt.plot(degrees, biases, label="$Bias^2$")
         plt.plot(degrees, variances, label="Variance")
@@ -409,7 +385,7 @@ def problem_g():
     
 
 def main():
-    problem_c()
+    problem_f()
 
 if __name__ == "__main__":
     main()
