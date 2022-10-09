@@ -55,8 +55,8 @@ def create_X_polynomial(x, y, n):
 
 class LinearRegression:
 
-    def __init__(self, modeltype="ols", lambdan=None):
-        """Initialize the model type and set lambda parameter
+    def __init__(self, modeltype="ols", lambdan=None, max_iter=int(1e7)):
+        """Initialize the model type and set lambda and max iterations parameter
         if required.
         
         Parameters
@@ -69,6 +69,7 @@ class LinearRegression:
         lambdan: None /float
             For ols, this parameter is None
             For ridgeg/lasso this parameter is in [0, +inf)
+        max_iter: 
         """
         modeltype = modeltype.lower()
         if modeltype not in ["ols", "ridge", "lasso"]:
@@ -83,6 +84,9 @@ class LinearRegression:
         
         self._model = modeltype
         self._lambda = lambdan
+        if type(max_iter) != int:
+            raise ValueError(f"max_iter must be of type int, not type:{type(max_iter)}")
+        self._max_iter = max_iter
     
     def __call__(self, X, z):
         """Estimates beta parameter using stored model type.
@@ -104,7 +108,7 @@ class LinearRegression:
         elif self._model == "ridge":
             beta_hat = ridge_regression(X, z, self._lambda)
         elif self._model == "lasso":
-            beta_hat = lasso_regression(X, z, self._lambda)
+            beta_hat = lasso_regression(X, z, self._lambda, self._max_iter)
         else:
             raise RuntimeError("Could not find model")
         
@@ -137,10 +141,10 @@ def ridge_regression(X, z, lambdan):
 
 
 # Lassso with scikit-learn:
-def lasso_regression(X, z, lambdan):
+def lasso_regression(X, z, lambdan, max_iter=int(1e7)):
     """Performs Lasso regression to estimate beta parameters."""
     # Lasso regression with scikit-learn
-    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=int(1e7))
+    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=max_iter)
     RegLasso.fit(X, z)
     beta_lasso = RegLasso.coef_
     return beta_lasso
