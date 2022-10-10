@@ -1,46 +1,49 @@
 # %%
-from math import degrees
 import matplotlib.pyplot as plt
 import numpy as np
 
 from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
+from sklearn.preprocessing import  StandardScaler
 
 import regression_tools as rt
 from imageio import imread
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
 
 
-def problem_b(x, y, z):
-    print("Problem g) part b):")
-    # Create design matrix and train-test-split
-    # degree of polynomial
-    deg = 5
 
+def OLS_regression(x, y, z):
+    """ Does OLS """
+
+    # set parameters
+    deg = 5 # degree of polynomial fit
+
+    print(f"Linear regression with ols, polynomial of degree={deg}:")
+    print()
+
+    # Create X design matrix with coordinates x and y 
     X = rt.create_X_polynomial(x, y, deg)
+
+    #Scale data to avoid using large numbers in calulations
+    #z_s = scaler.fit_transform(z.reshape(-1,1))
+
+
+    # Test-train-split both X-design matrix and z-data
     X_train, X_test, z_train, z_test = train_test_split(X, z, test_size=0.25)
 
-    #Scale X data
     scaler = StandardScaler()
     scaler.fit(X_train)
-    X_train_scaled = scaler.transform(X_train)
-    X_test_scaled = scaler.transform(X_test)
+    X_train_s = scaler.transform(X_train)
+    X_test_s = scaler.transform(X_test)
 
-    #Scaled z_data(tif-data) after mean
-    z_train_scaled = z_train - np.mean(z_train)
-    #z_test_scaled = z_test - np.mean(z_train)
+    z_train_s = z_train - np.mean(z_train)
 
-    # Estimate beta with scaled data
+    # Estimate beta with OLS linear regression
     ols = rt.LinearRegression()
-    beta = ols(X_train_scaled, z_train_scaled)
+    beta = ols(X_train_s, z_train_s)
 
-    # Use model to predict - ztilde and preform descaling
-    ztilde_train = X_train_scaled @ beta + np.mean(z_train)
-    ztilde_test = X_test_scaled @ beta + np.mean(z_train)
+    # Use model to predict 
+    ztilde_train = X_train_s @ beta + np.mean(z_train)
+    ztilde_test = X_test_s @ beta + np.mean(z_train)
 
-    print(f"Linear regression with polynomial of degree {deg}:")
     print("R2 - training")
     print(rt.R2(z_train, ztilde_train))
     print("MSE - training")
@@ -61,6 +64,8 @@ def problem_d(x, y, z):
     k_fold_num = 5
     degreerange = 20
     degrees = range(4, degreerange + 1)
+
+    #lists to obtain MSE-values for different degrees
     MSE_train = []
     MSE_test = []
 
@@ -68,20 +73,19 @@ def problem_d(x, y, z):
     print("Degrees, Mean(MSE-Train), Mean(MSE-test)")
 
     #progress = 0
-    #print(f'progress = {progress')
+    #print(f'progress = {progress}')
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
 
         scaler = StandardScaler()
         scaler.fit(X)
-        X_scaled = scaler.transform(X)
-        z_scaled = z - np.mean(z)
+        X_s = scaler.transform(X)
+        z_s = scaler.fit_transform(z.reshape(-1,1))
 
-
-        progress = deg/degreerange * 100
+        #progress = deg/degreerange * 100
         #print(f"Progress: {round(progress, 2)}%")
 
-        MSECV_train, MSECV_test = rt.cross_validation(X_scaled, z_scaled, k_fold_num, rt.ols_regression)
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold_num, rt.ols_regression)
         MSE_train.append(np.mean(MSECV_train))
         MSE_test.append(np.mean(MSECV_test))
         print(f'{deg}, {np.mean(MSECV_train)}, {np.mean(MSECV_test)}')
@@ -93,7 +97,7 @@ def problem_d(x, y, z):
     plt.ylabel("Mean Square Error")
     plt.title(f"MSE as a function of polynomial degree \n Cross validation - [n={n}, kfold={k_fold_num}]")
     plt.legend()
-    plt.savefig(f"../plots/Oppgave_g/D_linreg_degrange={degreerange}_N={n}_Kfold={k_fold_num}_CV_MSE.pdf")
+    #plt.savefig(f"../plots/Oppgave_g/D_linreg_degrange={degreerange}_N={n}_Kfold={k_fold_num}_CV_MSE.pdf")
     plt.show()
     plt.clf()
     
@@ -122,9 +126,8 @@ def problem_e(x, y, z):
             print(deg)
             X = rt.create_X_polynomial(x, y, deg)
             scaler = StandardScaler()
-            scaler.fit(X)
-            X_scaled = scaler.transform(X)
-            z_scaled = z - np.mean(z)
+            X_scaled = scaler.fit_transform(X)
+            z_scaled = scaler.fit_transform(z.reshape(-1,1))
 
             ridge = rt.LinearRegression('ridge', l)
             MSECV_train, MSECV_test = rt.cross_validation(X_scaled, z_scaled, k_fold_num, ridge)
@@ -153,10 +156,10 @@ def problem_f(x, y, z):
     lambdas = np.array([0.1, 0.2 , 0.3, 0.5, 0.8, 1, 10])
     k_fold_num = 5
     degreerange = 10
-    degrees = range(2, degreerange + 1)
+    degrees = range(8, degreerange + 1)
     max_iter = int(1e5)
 
-    print(f"Model = lasso, resampling = CV, k-fold={k_fold_num}, max_ite = {max_iter}")
+    print(f"Model = lasso, resampling = CV, k-fold={k_fold_num}")
     print("Lambda , Degrees, Mean(MSE-Train), Mean(MSE-test)")
 
     for l in lambdas:
@@ -166,15 +169,14 @@ def problem_f(x, y, z):
         for deg in degrees:
             X = rt.create_X_polynomial(x, y, deg)
             scaler = StandardScaler()
-            scaler.fit(X)
-            X_scaled = scaler.transform(X)
-            z_scaled = z - np.mean(z)
+            X_scaled = scaler.fit_transform(X)
+            z_scaled = (z - np.mean(z))/np.std(z)
 
-            lasso = rt.LinearRegression('lasso', l, max_iter=max_iter)
+            lasso = rt.LinearRegression('lasso', l)
             MSECV_train, MSECV_test = rt.cross_validation(X_scaled, z_scaled, k_fold_num, lasso)
             MSE_train.append(np.mean(MSECV_train))
             MSE_test.append(np.mean(MSECV_test))
-            print(f'{l}, {deg}, {np.mean(MSECV_train)}, {np.mean(MSECV_test)}')
+            print(f'{l}, {deg}, {np.mean(MSECV_test)} , {np.mean(MSECV_train)}')
 
         # Plotting MSE and R2 for all polynomial orders between 2 and 5
         plt.plot(degrees, MSE_train,'--o', label="Train data MSE")
@@ -193,7 +195,7 @@ def problem_f_inverse(x, y, z):
 
     k_fold_num = 5
     degrees = [2, 4, 6 ,8]
-    max_iter = int(1e4)
+    max_iter = int(1e7)
 
     print(f"Model = lasso, resampling = CV, k-fold={k_fold_num}, max_ite = {max_iter}")
     print("Now inverse, lambda on x-axis for certian degrees")
@@ -202,9 +204,8 @@ def problem_f_inverse(x, y, z):
     for deg in degrees:
         X = rt.create_X_polynomial(x, y, deg)
         scaler = StandardScaler()
-        scaler.fit(X)
-        X_scaled = scaler.transform(X)
-        z_scaled = z - np.mean(z)
+        X_scaled = scaler.fit_transform(X)
+        z_scaled = (z - np.mean(z))/np.std(z)
 
 
         lambdalogspace = np.logspace(-3, 7)
@@ -247,7 +248,7 @@ def problem_g():
 def main(tif_file):
     #We constrain our number of data by randomly picking out 150_000 points
     global n
-    n = 10000
+    n = 10_000
     print(f'Number of randomly selected points = {n}')
     np.random.seed(2018)
     tif = imread(tif_file)
@@ -264,8 +265,7 @@ def main(tif_file):
     y = np.array(y)
     z = np.array(z)
 
-    problem_f(x, y, z)
-
+    OLS_regression(x, y, z)
 
 if __name__ == "__main__":
     main("SRTM_Saarland.tif")

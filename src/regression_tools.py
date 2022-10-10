@@ -1,26 +1,16 @@
 # %%
 # Importing libraries
 # TODO: clean up imports
-from copy import copy
-from re import L
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
-from random import random, seed
-import sklearn as skl
+from random import seed
 # import numba as nb
 
 import numpy as np
 import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold
-from sklearn.linear_model import Ridge
 from sklearn.linear_model import Lasso
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle, resample
+from sklearn.utils import resample
 
 
 def R2(y_data, y_model):
@@ -55,7 +45,7 @@ def create_X_polynomial(x, y, n):
 
 class LinearRegression:
 
-    def __init__(self, modeltype="ols", lambdan=None, max_iter=int(1e7)):
+    def __init__(self, modeltype="ols", lambdan=None):
         """Initialize the model type and set lambda and max iterations parameter
         if required.
         
@@ -84,9 +74,6 @@ class LinearRegression:
         
         self._model = modeltype
         self._lambda = lambdan
-        if type(max_iter) != int:
-            raise ValueError(f"max_iter must be of type int, not type:{type(max_iter)}")
-        self._max_iter = max_iter
     
     def __call__(self, X, z):
         """Estimates beta parameter using stored model type.
@@ -104,11 +91,11 @@ class LinearRegression:
             Estimated beta parameters
         """
         if self._model == "ols":
-            beta_hat =  ols_regression(X, z)
+            beta_hat = ols_regression(X, z)
         elif self._model == "ridge":
             beta_hat = ridge_regression(X, z, self._lambda)
         elif self._model == "lasso":
-            beta_hat = lasso_regression(X, z, self._lambda, self._max_iter)
+            beta_hat = lasso_regression(X, z, self._lambda)
         else:
             raise RuntimeError("Could not find model")
         
@@ -141,13 +128,13 @@ def ridge_regression(X, z, lambdan):
 
 
 # Lassso with scikit-learn:
-def lasso_regression(X, z, lambdan, max_iter=int(1e7)):
+def lasso_regression(X, z, lambdan):
     """Performs Lasso regression to estimate beta parameters."""
     # Lasso regression with scikit-learn
-    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=max_iter)
-    RegLasso.fit(X, z)
-    beta_lasso = RegLasso.coef_
-    return beta_lasso
+    RegLasso = Lasso(lambdan, fit_intercept=False)
+    fit = RegLasso.fit(X, z)
+    beta_coef = fit.coef_
+    return beta_coef
 
 
 def bootstrap(X, z, B, model):
@@ -276,9 +263,10 @@ def cross_validation(X, z, k_deg_fold, model):
 
 
 if __name__ == "__main__":
+    """
     # Generating data
     from analysis import generate_data_Franke
-    seed = 898
+    #seed = 2018
     N = 100
     sigma2 = 0
 
@@ -313,5 +301,6 @@ if __name__ == "__main__":
     MSE_train, MSE_test = cross_validation(X, z, k_fold, model)
     print(MSE_train, MSE_test)
     #print(MSE_arr)
+    """
     
     
