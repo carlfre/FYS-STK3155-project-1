@@ -14,6 +14,7 @@ def plot_data(x, y, z, title=""):
 
 
 def OLS_evalation(x, y, z):
+    ols = rt.LinearRegression("ols")
     # Evaluate R2 and MSE for polynomials of degree up to 5
     degreerange = 20
     degrees = range(2, degreerange + 1)
