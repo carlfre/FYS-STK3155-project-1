@@ -87,32 +87,7 @@ def OLS_bias_variance(x, y, z):
     # Plot train & test MSE for degree up to 10
     degreerange = 20
     degrees = range(1, degreerange + 1)
-    MSE_train = []
-    MSE_test = []
 
-    for deg in degrees:
-        X = rt.create_X_polynomial(x, y, deg)
-        scaler = StandardScaler()
-        X_s = scaler.fit_transform(X)
-        z_s = scaler.fit_transform(z.reshape(-1, 1)).flatten()  
-        X_train_s, X_test_s, z_train_s, z_test_s = train_test_split(X_s,z_s,test_size=0.25)
-        beta = ols(X_train_s, z_train_s)
-        ztilde_train = X_train_s @ beta
-        ztilde_test = X_test_s @ beta
-        
-        MSE_train.append(rt.MSE(z_train_s, ztilde_train))
-        MSE_test.append(rt.MSE(z_test_s, ztilde_test))
-
-    """
-    # Plotting MSE and R2 for all polynomial orders between 2 and 5
-    plt.plot(degrees, MSE_train, label="Train data MSE")
-    plt.plot(degrees, MSE_test, label="Test data MSE")
-    plt.xlabel("Polynomial degree")
-    plt.ylabel("Mean Square Error")
-    plt.title("Train and test MSE as a function of model complexity")
-    plt.legend()
-    plt.show()
-    """
 
     # Bootstrap for bias-variance tradeoff analysis
     degrees = list(range(1, degreerange + 1))
@@ -127,7 +102,7 @@ def OLS_bias_variance(x, y, z):
         variances.append(variance)
         errors.append(error)
 
-    plt.plot(degrees, biases, "--o" , label="Bias^2$")
+    plt.plot(degrees, biases, "--o" , label="Bias$^2$")
     plt.plot(degrees, variances, "--o" ,label="Variance")
     plt.plot(degrees, errors, "--o", label="Error")
     plt.title("Bias, variance and error for polynomial degrees", fontsize=18)
@@ -141,9 +116,6 @@ def OLS_bias_variance(x, y, z):
 
 
 def find_lambda_range(x, y, z):
-    print("Problem e)")
-    """ This function does problem b - d but now with Ridge regression
-    """
 
     #Plot train & test MSE for degree up to 10 with lambda l
     degree = 20
@@ -172,14 +144,15 @@ def find_lambda_range(x, y, z):
     # Plotting MSE for all polynomial orders between 2 and 10
     plt.plot(np.log10(lambda_range), MSE_train_ridge, label="Train data MSE ridge")
     plt.plot(np.log10(lambda_range), MSE_test_ridge, label="Test data MSE ridge")
-    plt.plot(np.log10(lambda_range), MSE_train_lasso, label="Train data MSE ridge")
-    plt.plot(np.log10(lambda_range), MSE_test_lasso, label="Test data MSE ridge")
+    plt.plot(np.log10(lambda_range), MSE_train_lasso, label="Train data MSE lasso")
+    plt.plot(np.log10(lambda_range), MSE_test_lasso, label="Test data MSE lasso")
     plt.xticks(fontsize=14)
     plt.yticks(fontsize=14)
-    plt.xlabel("Polynomial degree", fontsize=16)
+    plt.xlabel(fr"$\log (\lambda)$", fontsize=16)
     plt.ylabel("Mean Square Error", fontsize=16)
-    plt.title(fr"MSE as a function of $\log\lambda$ for degree {degree}",fontsize=18)
+    plt.title(fr"MSE as a function of $\log(\lambda)$ for degree {degree}",fontsize=18)
     plt.legend(fontsize=14)
+    plt.tight_layout()
     plt.show() 
 
 
@@ -188,8 +161,8 @@ def plot_MSE_comp(x, y, z):
     k_fold = 5
 
     # set a labda ranges:
-    lambda_range_lasso = np.logspace(-2, 1)
-    lambda_range_ridge = np.logspace(-2, 1)
+    lambda_range_lasso = np.logspace(-4, -1)
+    lambda_range_ridge = np.logspace(-10, 2)
 
     # set degree range of interest
     deg_range = np.array(range(2, 20 + 1))
@@ -229,13 +202,38 @@ def plot_MSE_comp(x, y, z):
         MSE_lasso.append(rt.MSE(z_test_s, ztilde_lasso_s))
         MSE_ridge.append(rt.MSE(z_test_s, ztilde_ridge_s))
 
-    plt.plot(deg_range, MSE_ols, "--o", label="ols")
-    plt.plot(deg_range, MSE_ridge, "--o", label="ridge")
-    plt.plot(deg_range, MSE_lasso, "--o", label="lasso")
-    plt.legend()
+    plt.plot(deg_range, np.log10(lambda_optimal_ridge), "--o", c="y")
+    plt.ylabel(r"$\log(\lambda)$", fontsize=18)
+    plt.xlabel("Polynomial order", fontsize=18)
+    plt.xticks(deg_range, rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r"Optimal $\lambda$ in ridge for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-10, 2]", fontsize=18)
+    plt.tight_layout()
     plt.show()
 
-    return lambda_optimal_ridge, lambda_optimal_lasso
+    plt.plot(deg_range, np.log10(lambda_optimal_lasso), "--o", c="r")
+    plt.ylabel(r"$\log(\lambda)$", fontsize=18)
+    plt.xlabel("Polynomial order", fontsize=18)
+    plt.xticks(deg_range, rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r"Optimal $\lambda$ in lasso for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-4, -1]", fontsize=18)
+    plt.tight_layout()
+    plt.show()
+
+    plt.scatter(deg_range[np.argmin(MSE_ols)], np.min(MSE_ols), c="b",  label="Optimal model ols", zorder=6)
+    plt.scatter(deg_range[np.argmin(MSE_ridge)], np.min(MSE_ridge), c="g", label="Optimal model ridge", zorder=5)
+    plt.scatter(deg_range[np.argmin(MSE_lasso)], np.min(MSE_lasso), c="k", label="Optimal model lasso", zorder=4)
+    plt.plot(deg_range, MSE_ols, "--o", label="ols",zorder=3)
+    plt.plot(deg_range, MSE_ridge, "--o", label="ridge", zorder=2)
+    plt.plot(deg_range, MSE_lasso, "--o", label="lasso", zorder=1)
+    plt.xlabel("Polynomal order", fontsize=18)
+    plt.ylabel("Mean Square Error", fontsize=18)
+    plt.xticks(deg_range, rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(fr"Comparison of MSE between models for optimized $\lambda$", fontsize=18)
+    plt.legend(fontsize=12)
+    plt.tight_layout()
+    plt.show()
 
 
 def main():
@@ -246,7 +244,7 @@ def main():
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
 
     #scatter_3d(x, y, z, title=fr"Sampled data, $\sigma^2=0.1$")
-    a, b = plot_MSE_comp(x, y, z)
+    plot_MSE_comp(x, y, z)
 
 if __name__ == "__main__":
     main()
