@@ -123,7 +123,7 @@ def ridge_regression(X, z, lambdan):
 # Lassso with scikit-learn:
 def lasso_regression(X, z, lambdan):
     """Returns beta parameters"""
-    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=1e4)
+    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=1e7)
     fit = RegLasso.fit(X, z)
     beta_coef = fit.coef_
     return beta_coef

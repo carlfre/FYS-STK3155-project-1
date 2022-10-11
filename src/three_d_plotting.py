@@ -78,8 +78,8 @@ def plot_estimated_environment(model_type="ols", n=5, lmbda=None, save=False):
     from sklearn.preprocessing import StandardScaler
     
     # estimate beta
-    seed = 38748
-    N = 400
+    seed = 199
+    N = 1000
     sigma2 = 0.1
 
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
@@ -116,22 +116,22 @@ def plot_estimated_environment(model_type="ols", n=5, lmbda=None, save=False):
 
 
     # Plot the data in 3D
-    title = f"{str(model)}, n={n}"
+    title = f"{str(model)}, deg={n}"
     if lmbda is not None:
-        title += f", $\lambda$={lmbda:e}"
+        title += f", $\lambda$={lmbda:.2e}"
 
     if save:
-        filename=f"figures/3d_{model_type}_{n}.pdf"
+        filename=f"3d_{model_type}_{n}.pdf"
     else:
         filename=""
     plot_3d(X, Y, Z, title=title, filename=filename)
 
 
 def main():
-    #plot_estimated_environment("ols", 5,)
-    #plot_estimated_environment("ridge", 5, lmbda=1e-10)
+    #plot_estimated_environment("ols", 9,)
+    plot_estimated_environment("ridge", 16, lmbda=1.4563484775012444e-06)
     #plot_estimated_environment("lasso", 5, lmbda=1e-5)
-    plot_Franke()
+    #plot_Franke()
 
 
 if __name__ == "__main__":
