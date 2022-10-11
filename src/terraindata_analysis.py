@@ -17,6 +17,7 @@ def plot_terrain():
     plt.figure()
     plt.title("Terrain over Saarland")
     plt.imshow(terrain1, cmap="gray")
+    plt.colorbar()
     plt.xlabel("X")
     plt.ylabel("Y")
     plt.show()
@@ -285,6 +286,126 @@ def lasso_over_lambda(x, y, z):
         plt.clf()
 
 
+def plot_MSE_comp(x, y, z):
+    # set k-fold
+    k_fold = 5
+
+    # set a labda ranges:
+    lambda_range_lasso = np.logspace(-4, -1)
+    lambda_range_ridge = np.logspace(-10, 2)
+
+    # set degree range of interest
+    deg_range = np.array(range(2, 20 + 1))
+    lambda_optimal_lasso = np.zeros(len(deg_range))
+    lambda_optimal_ridge = np.zeros(len(deg_range))
+
+    MSE_ols = []
+    MSE_ridge = []
+    MSE_lasso = []
+
+    # for each degree we want to calculate the parameter lambda, within our range
+    # which optimize the ridge regression
+    for i, deg in enumerate(deg_range):
+        print(deg)
+        X = rt.create_X_polynomial(x, y, deg)
+        scaling = StandardScaler()
+        X_s = scaling.fit_transform(X)
+        z_s = scaling.fit_transform(z.reshape(-1, 1)).flatten()
+        lambda_optimal_lasso[i] = rt.CV_gridsearch(X_s, z_s, k_fold, lambda_range_lasso, "ridge")
+        lambda_optimal_ridge[i] = rt.CV_gridsearch(X_s, z_s, k_fold, lambda_range_ridge, "ridge")
+        
+
+        # Evaluate model with cross - validation 
+        ols = rt.LinearRegression("ols")
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, ols)
+        MSE_ols.append(np.mean(MSECV_test))
+
+        ridge = rt.LinearRegression("ridge", lambda_optimal_ridge[i])
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, ridge)
+        MSE_ridge.append(np.mean(MSECV_test))
+
+        lasso = rt.LinearRegression("lasso", lambda_optimal_lasso[i])
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, lasso)
+        MSE_lasso.append(np.mean(MSECV_test))
+
+    #plot optimal labdas found for each degree in deg_range
+    plt.plot(deg_range, np.log10(lambda_optimal_ridge), "--o", c="y")
+    plt.ylabel(r"$\log(\lambda)$", fontsize=18)
+    plt.xlabel("Polynomial order", fontsize=18)
+    plt.xticks(deg_range, rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r"Optimal $\lambda$ in ridge for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-10, 2]", fontsize=18)
+    plt.tight_layout()
+    plt.show()
+
+    # plot optimal labdas found for each degree in deg_range
+    plt.plot(deg_range, np.log10(lambda_optimal_lasso), "--o", c="r")
+    plt.ylabel(r"$\log(\lambda)$", fontsize=18)
+    plt.xlabel("Polynomial order", fontsize=18)
+    plt.xticks(deg_range, rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(r"Optimal $\lambda$ in lasso for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-4, -1]", fontsize=18)
+    plt.tight_layout()
+    plt.show()
+
+    # plot
+    plt.scatter(deg_range[np.argmin(MSE_ols)], np.min(MSE_ols), c="b",  label=f"Optimal MSE OLS = {np.min(MSE_ols):.4f}", zorder=6, marker="v", s=120)
+    plt.scatter(deg_range[np.argmin(MSE_ridge)], np.min(MSE_ridge), c="k", label=f"Optimal MSE ridge = {np.min(MSE_ridge):.4f}", zorder=5, marker="D", s=130)
+    plt.scatter(deg_range[np.argmin(MSE_lasso)], np.min(MSE_lasso), c="g", label=f"Optimal MSE lasso = {np.min(MSE_lasso):.4f}", zorder=4, marker="*", s=120)
+    plt.plot(deg_range, MSE_ols, "--o", label="OLS",zorder=3)
+    plt.plot(deg_range, MSE_ridge, "--o", label="Ridge", zorder=2)
+    plt.plot(deg_range, MSE_lasso, "--o", label="Lasso", zorder=1)
+    plt.xlabel("Polynomial order", fontsize=18)
+    plt.ylabel("Mean Square Error", fontsize=18)
+    plt.xticks(deg_range, rotation=45, fontsize=14)
+    plt.yticks(fontsize=14)
+    plt.title(fr"Comparison of MSE between models for optimized $\lambda$", fontsize=18)
+    plt.legend(fontsize=12)
+    plt.tight_layout()
+    plt.show()
+
+    print("OLS")
+    print(f"deg optimal: {deg_range[np.argmin(MSE_ols)]}")
+    print("Ridge:")
+    print(f"lambda value: {lambda_optimal_ridge[np.argmin(MSE_ridge)]}")
+    print(f"deg optimal: {deg_range[np.argmin(MSE_ridge)]}")
+    print("Lasso:")
+    print(f": {lambda_optimal_lasso[np.argmin(MSE_lasso)]}")
+    print(f"deg optimal: {deg_range[np.argmin(MSE_lasso)]}")
+
+
+def plot_terrain_best_ols(x, y, z, deg):
+
+    X = rt.create_X_polynomial(x, y, deg)
+    scaler = StandardScaler()
+    X_s = scaler.fit_transform(X)
+    model = rt.LinearRegression("ridge", 8.68511373751352e-08)
+    z_s = z - np.mean(z)
+    beta = model(X_s, z_s)
+
+    m = 3601
+    x_ = np.linspace(0, 3600, m)
+    y_ = np.linspace(0, 3600, m)
+
+    X, Y = np.meshgrid(x_, y_)
+    X_star = X.flatten()
+    Y_star = Y.flatten()
+    design_matrix = rt.create_X_polynomial(X_star, Y_star, deg)
+    design_matrix_s = scaler.fit_transform(design_matrix)
+
+    Z_star_tilde_s = design_matrix_s @ beta
+    Z_star_tilde = Z_star_tilde_s + np.mean(z)
+
+    Z_tilde = Z_star_tilde.reshape(m, m)
+    plt.figure()
+    plt.title(f"Estimated terrain of Saarland with Ridge; degree={deg}")
+    plt.imshow(Z_tilde, cmap="gray")
+    plt.colorbar()
+    plt.xlabel("X")
+    plt.ylabel("Y")
+    plt.show()
+
+
 def main(tif_file):
     #We constrain our number of data by randomly picking out 1000 points
     global n
@@ -305,7 +426,7 @@ def main(tif_file):
     y = np.array(y)
     z = np.array(z)
 
-    lasso_regression_CV(x, y, z)
+    plot_terrain()
 
 if __name__ == "__main__":
     main("SRTM_Saarland.tif")

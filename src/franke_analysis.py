@@ -132,6 +132,8 @@ def find_lambda_range(x, y, z):
         scaler = StandardScaler()
         X_s = scaler.fit_transform(X)
         z_s = scaler.fit_transform(z.reshape(-1, 1)).flatten()
+
+
         ridge = rt.LinearRegression("ridge", l)
         MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, ridge)
         MSE_train_ridge.append(np.mean(MSECV_train))
@@ -183,31 +185,25 @@ def plot_MSE_comp(x, y, z):
         z_s = scaling.fit_transform(z.reshape(-1, 1)).flatten()
         lambda_optimal_lasso[i] = rt.CV_gridsearch(X_s, z_s, k_fold, lambda_range_lasso, "ridge")
         lambda_optimal_ridge[i] = rt.CV_gridsearch(X_s, z_s, k_fold, lambda_range_ridge, "ridge")
-        
-        X_train_s, X_test_s, z_train_s, z_test_s = train_test_split(X_s, z_s, test_size=0.25)
-        
-        ols = rt.LinearRegression("ols")
-        beta_ols = ols(X_train_s, z_train_s)
-        ztilde_ols_s = X_test_s@beta_ols
 
-        lasso = rt.LinearRegression("lasso", lambda_optimal_lasso[i])
-        beta_lasso = lasso(X_train_s, z_train_s)
-        ztilde_lasso_s = X_test_s@beta_lasso
+        ols = rt.LinearRegression("ols")
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, ols)
+        MSE_ols.append(np.mean(MSECV_test))
 
         ridge = rt.LinearRegression("ridge", lambda_optimal_ridge[i])
-        beta_ridge = ridge(X_train_s, z_train_s)
-        ztilde_ridge_s = X_test_s@beta_ridge
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, ridge)
+        MSE_ridge.append(np.mean(MSECV_test))
 
-        MSE_ols.append(rt.MSE(z_test_s, ztilde_ols_s))
-        MSE_lasso.append(rt.MSE(z_test_s, ztilde_lasso_s))
-        MSE_ridge.append(rt.MSE(z_test_s, ztilde_ridge_s))
+        lasso = rt.LinearRegression("lasso", lambda_optimal_lasso[i])
+        MSECV_train, MSECV_test = rt.cross_validation(X_s, z_s, k_fold, lasso)
+        MSE_lasso.append(np.mean(MSECV_test))
 
     plt.plot(deg_range, np.log10(lambda_optimal_ridge), "--o", c="y")
     plt.ylabel(r"$\log(\lambda)$", fontsize=18)
     plt.xlabel("Polynomial order", fontsize=18)
     plt.xticks(deg_range, rotation=45, fontsize=14)
     plt.yticks(fontsize=14)
-    plt.title(r"Optimal $\lambda$ in ridge for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-10, 2]", fontsize=18)
+    plt.title(r"Optimal $\lambda$ in ridge for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-10, 2], k-fold:5", fontsize=18)
     plt.tight_layout()
     plt.show()
 
@@ -216,17 +212,17 @@ def plot_MSE_comp(x, y, z):
     plt.xlabel("Polynomial order", fontsize=18)
     plt.xticks(deg_range, rotation=45, fontsize=14)
     plt.yticks(fontsize=14)
-    plt.title(r"Optimal $\lambda$ in lasso for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-4, -1]", fontsize=18)
+    plt.title(r"Optimal $\lambda$ in lasso for each polonomial order" "\n" r"Scope of $\log(\lambda)$ between [-4, -1], k-fold:5", fontsize=18)
     plt.tight_layout()
     plt.show()
 
-    plt.scatter(deg_range[np.argmin(MSE_ols)], np.min(MSE_ols), c="b",  label="Optimal model ols", zorder=6)
-    plt.scatter(deg_range[np.argmin(MSE_ridge)], np.min(MSE_ridge), c="g", label="Optimal model ridge", zorder=5)
-    plt.scatter(deg_range[np.argmin(MSE_lasso)], np.min(MSE_lasso), c="k", label="Optimal model lasso", zorder=4)
-    plt.plot(deg_range, MSE_ols, "--o", label="ols",zorder=3)
-    plt.plot(deg_range, MSE_ridge, "--o", label="ridge", zorder=2)
-    plt.plot(deg_range, MSE_lasso, "--o", label="lasso", zorder=1)
-    plt.xlabel("Polynomal order", fontsize=18)
+    plt.scatter(deg_range[np.argmin(MSE_ols)], np.min(MSE_ols), c="b",  label=f"Optimal MSE OLS = {np.min(MSE_ols):.4f}", zorder=6, marker="v", s=120)
+    plt.scatter(deg_range[np.argmin(MSE_ridge)], np.min(MSE_ridge), c="k", label=f"Optimal MSE ridge = {np.min(MSE_ridge):.4f}", zorder=5, marker="D", s=130)
+    plt.scatter(deg_range[np.argmin(MSE_lasso)], np.min(MSE_lasso), c="g", label=f"Optimal MSE lasso = {np.min(MSE_lasso):.4f}", zorder=4, marker="*", s=120)
+    plt.plot(deg_range, MSE_ols, "--o", label="OLS",zorder=3)
+    plt.plot(deg_range, MSE_ridge, "--o", label="Ridge", zorder=2)
+    plt.plot(deg_range, MSE_lasso, "--o", label="Lasso", zorder=1)
+    plt.xlabel("Polynomial order", fontsize=18)
     plt.ylabel("Mean Square Error", fontsize=18)
     plt.xticks(deg_range, rotation=45, fontsize=14)
     plt.yticks(fontsize=14)
@@ -234,6 +230,16 @@ def plot_MSE_comp(x, y, z):
     plt.legend(fontsize=12)
     plt.tight_layout()
     plt.show()
+
+
+    print("OLS")
+    print(f"deg optimal: {deg_range[np.argmin(MSE_ols)]}")
+    print("Ridge:")
+    print(f"lambda value: {lambda_optimal_ridge[np.argmin(MSE_ridge)]}")
+    print(f"deg optimal: {deg_range[np.argmin(MSE_ridge)]}")
+    print("Lasso:")
+    print(f": {lambda_optimal_lasso[np.argmin(MSE_lasso)]}")
+    print(f"deg optimal: {deg_range[np.argmin(MSE_lasso)]}")
 
 
 def main():
@@ -244,7 +250,7 @@ def main():
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
 
     #scatter_3d(x, y, z, title=fr"Sampled data, $\sigma^2=0.1$")
-    plot_MSE_comp(x, y, z)
+    #plot_MSE_comp(x, y, z)
 
 if __name__ == "__main__":
     main()
