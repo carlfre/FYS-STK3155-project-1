@@ -1,26 +1,12 @@
 # %%
 # Importing libraries
-# TODO: clean up imports
-from copy import copy
-from re import L
-from mpl_toolkits.mplot3d import Axes3D
 import matplotlib.pyplot as plt
-from matplotlib import cm
-from matplotlib.ticker import LinearLocator, FormatStrFormatter
 import numpy as np
-from random import random, seed
-import sklearn as skl
-# import numba as nb
+from random import seed
 
-import numpy as np
-import matplotlib.pyplot as plt
-from sklearn.model_selection import KFold
-from sklearn.linear_model import Ridge
 from sklearn.linear_model import Lasso
-from sklearn.model_selection import cross_val_score
-from sklearn.preprocessing import PolynomialFeatures
 from sklearn.model_selection import train_test_split
-from sklearn.utils import shuffle, resample
+from sklearn.utils import resample
 
 
 def R2(y_data, y_model):
@@ -49,13 +35,12 @@ def create_X_polynomial(x, y, n):
         q = int((i) * (i + 1) / 2)
         for k in range(i + 1):
             X[:, q + k] = (x ** (i - k)) * (y ** k)
-
     return X
 
 
 class LinearRegression:
 
-    def __init__(self, modeltype="ols", lambdan=None, max_iter=int(1e7)):
+    def __init__(self, modeltype="ols", lambdan=None):
         """Initialize the model type and set lambda and max iterations parameter
         if required.
         
@@ -84,9 +69,6 @@ class LinearRegression:
         
         self._model = modeltype
         self._lambda = lambdan
-        if type(max_iter) != int:
-            raise ValueError(f"max_iter must be of type int, not type:{type(max_iter)}")
-        self._max_iter = max_iter
     
     def __call__(self, X, z):
         """Estimates beta parameter using stored model type.
@@ -104,11 +86,11 @@ class LinearRegression:
             Estimated beta parameters
         """
         if self._model == "ols":
-            beta_hat =  ols_regression(X, z)
+            beta_hat = ols_regression(X, z)
         elif self._model == "ridge":
             beta_hat = ridge_regression(X, z, self._lambda)
         elif self._model == "lasso":
-            beta_hat = lasso_regression(X, z, self._lambda, self._max_iter)
+            beta_hat = lasso_regression(X, z, self._lambda)
         else:
             raise RuntimeError("Could not find model")
         
@@ -123,31 +105,28 @@ class LinearRegression:
 
 
 def ols_regression(X, z):
-    """Performs Ordinary Least Squares regression to estimate
-    beta parameters."""
-    # Solving for beta
+    """returns betaparameters"""
     beta = np.linalg.pinv(X.T @ X) @ X.T @ z
     return beta
 
 
 def ridge_regression(X, z, lambdan):
-    """Performs Ridge regression to estimate beta parameters."""
+    """Returns beta parameters"""
     # create identity matrix
     I = np.eye(len(X.T), len(X.T))
 
-    # Solving for beta
+    # analytic solution using sudomatrix inversion 
     beta_ridge = np.linalg.pinv(X.T @ X + lambdan * I) @ X.T @ z
     return beta_ridge
 
 
 # Lassso with scikit-learn:
-def lasso_regression(X, z, lambdan, max_iter=int(1e7)):
-    """Performs Lasso regression to estimate beta parameters."""
-    # Lasso regression with scikit-learn
-    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=max_iter)
-    RegLasso.fit(X, z)
-    beta_lasso = RegLasso.coef_
-    return beta_lasso
+def lasso_regression(X, z, lambdan):
+    """Returns beta parameters"""
+    RegLasso = Lasso(lambdan, fit_intercept=False, max_iter=1e4)
+    fit = RegLasso.fit(X, z)
+    beta_coef = fit.coef_
+    return beta_coef
 
 
 def bootstrap(X, z, B, model):
@@ -234,41 +213,56 @@ def bootstrap(x, y, z, deg, model, B, test_size=0.25):
     return bias, variance, error
 
 
-def cross_validation(X, z, k_deg_fold, model):
-    "Preformes Cross-Validation with model=linreg, X=design-matrix"
-    "Returns arrays - MSE-train, MSE-test - with length k_deg_fold"
-    "np.mean() on output is estimated MSE with cross-validation"
+def cross_validation(X, z, k_fold, model):
+    """ Returns array of calculated MSE for test and train data
 
-    # step 1: shuffle datasets randomly using np.random.permutation(len(x)):
+    Parameters
+    ----------
+    model: LinearRegression object
+        Either OLS, Ridge, or Lasso regression
+    X: np.ndarray
+        Design matrix
+    z: np.ndarray
+        Dependent variable
+    k-fold: int
+        Number of k-fold 
+    
+    Returns
+    -------
+    MSE_train: np.array
+        MSE-score for each train groupe
+    MSE_test: np.array
+        MSE-score for each test groupe
+    """
+
+    # array to keep track of MSE for each test-group and train-group
+    MSE_train = np.zeros((k_fold))
+    MSE_test = np.zeros((k_fold))
+
+    # shuffle datasets randomly:
     assert len(X) == len(z)
     p = np.random.permutation(len(X))
     X, z = X[p], z[p]
 
-    # step 2: split the data in k groups with numpy.array_split
-    X = np.array_split(X, k_deg_fold)
-    z = np.array_split(z, k_deg_fold)
+    # split the data in k-groups
+    X = np.array_split(X, k_fold)
+    z = np.array_split(z, k_fold)
 
-    # array to keep track of MSE for each test-group and train-group
-    MSE_train = np.zeros((k_deg_fold))
-    MSE_test = np.zeros((k_deg_fold))
-
-    # step 3: for i in range of folds preform:
-    for i in range(k_deg_fold):
-        # a) pick one group to be test data
+    # for i in range of folds preform:
+    for i in range(k_fold):
+        # pick one group to be test data
         X_test, z_test = X[i], z[i]
 
-        # b) take remaining groups as train data
-        # np.delete() creates a "new" array (does not alter X)
-        # concatenate merges remaining groups to train data
+        # merge remaining groups to train data
         X_train = np.concatenate([m for m in np.delete(X, i, axis=0)])
         z_train = np.concatenate([m for m in np.delete(z, i, axis=0)])
 
-        # c) fit model to train data with linreg and compute z_tilde
+        # fit model to train data and compute z_tilde
         beta = model(X_train, z_train)
         z_tilde_test = X_test @ beta
         z_tilde_train = X_train @ beta
 
-        # d) evaluate model and save score-value to MSE-arrays
+        # evaluate model and save score-value to MSE-arrays
         MSE_train[i] = MSE(z_train, z_tilde_train)
         MSE_test[i] = MSE(z_test, z_tilde_test)
 
@@ -276,9 +270,10 @@ def cross_validation(X, z, k_deg_fold, model):
 
 
 if __name__ == "__main__":
+    """
     # Generating data
     from analysis import generate_data_Franke
-    seed = 898
+    #seed = 2018
     N = 100
     sigma2 = 0
 
@@ -313,5 +308,6 @@ if __name__ == "__main__":
     MSE_train, MSE_test = cross_validation(X, z, k_fold, model)
     print(MSE_train, MSE_test)
     #print(MSE_arr)
+    """
     
     
