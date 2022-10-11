@@ -1,12 +1,8 @@
 #%%
-from queue import Empty
 import matplotlib.pyplot as plt
 import numpy as np
 from imageio import imread
-from mpl_toolkits.mplot3d import Axes3D
-from matplotlib import cm
-from sklearn.model_selection import  train_test_split
-from sklearn.preprocessing import MinMaxScaler, StandardScaler, Normalizer
+from sklearn.model_selection import train_test_split
 from sklearn.utils import resample
 
 import regression_tools as rt
@@ -24,9 +20,9 @@ def problem_b():
     x, y, z, _ = generate_data_Franke(N, sigma2, seed)
 
     # Create design matrix and train-test-split
-    #deg = 5 # degree of polynomial
-    #X = rt.create_X_polynomial(x, y, deg)
-    #X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
+    deg = 5 # degree of polynomial
+    X = rt.create_X_polynomial(x, y, deg)
+    X_train, X_test, z_train, z_test = train_test_split(X,z,test_size=0.25)
 
     # Estimate beta
     ols = rt.LinearRegression("ols")
@@ -309,7 +305,7 @@ def problem_f():
 
     # Set parameters
     seed = 199
-    N = 400
+    N = 1000
     sigma2 = 0.1 # Variance of noise
 
     # Generate data
@@ -324,11 +320,11 @@ def problem_f():
     '''
 
     #Preform task c-d with lasso-regression for different lambdas
-    lambdas = np.array([0])
+    lambdas = np.array([10])
 
     for l in lambdas:
         lasso = rt.LinearRegression("lasso", l)
-
+        """
         # Plot train & test MSE for degree up to 10
         degreerange = 10
         degrees = range(2, degreerange + 1)
@@ -345,7 +341,7 @@ def problem_f():
             MSE_train.append(rt.MSE(z_train, ztilde_train))
             MSE_test.append(rt.MSE(z_test, ztilde_test))
 
-        """
+        
         # Plotting MSE for all polynomial orders between 2 and 10
         plt.plot(degrees, MSE_train,"--o" ,label="Train data MSE")
         plt.plot(degrees, MSE_test, "--o" ,label="Test data MSE")
@@ -355,7 +351,7 @@ def problem_f():
         plt.legend(fontsize=20)
         plt.savefig(f"plots/Oppgave_f/Lasso_tt_L={l}.pdf")
         plt.show()
-        """
+        
         
         # Bootstrap for bias-variance tradeoff analysis
         B = 100
@@ -377,8 +373,8 @@ def problem_f():
         plt.legend(fontsize=20)
         plt.savefig(f"plots/Oppgave_f/Lasso_bias_variance_L={l}.pdf")
         plt.show()
-
         """
+        
         # Plot train & test MSE for degree up to 10
         k_fold_num = 5
         degreerange = 10
@@ -395,13 +391,12 @@ def problem_f():
         # Plotting MSE for all polynomial orders between 2 and 10
         plt.plot(degrees, MSE_train, "--o",label="Train data MSE")
         plt.plot(degrees, MSE_test, "--o" ,label="Test data MSE")
-        plt.xlabel("Polynomial degree")
-        plt.ylabel("Error")
-        plt.title(f"Cross validation MSE with lasso regression \n as a function of polynomial degrees with lambda {l}")
+        plt.xlabel("Polynomial degree", fontsize=20)
+        plt.ylabel("MSE", fontsize=20)
+        plt.title(fr"$\lambda$ = {l}", fontsize=30)
         plt.legend(fontsize=20)
-        #plt.savefig(f"plots/Oppgave_f/Lasso_Cross_Validation_MSE_lambda_{l}.pdf")
+        plt.savefig(f"../plots/Oppgave_f/Lasso_Cross_Validation_MSE_lambda_{l}.pdf")
         plt.show()
-        """
 
 
 def problem_g():

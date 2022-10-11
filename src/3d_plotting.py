@@ -49,6 +49,21 @@ def plot_3d(X, Y, Z, title="", filename=""):
     plt.show()
 
 
+def scatter_3d(x, y, z, title="", filename=""):
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    sc_plot = ax.scatter(x, y, z, c=z, cmap='viridis')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlabel('z')
+    fig.colorbar(sc_plot)
+    plt.title(title)
+    if filename:
+        plt.savefig(filename)
+    plt.show()
+
+
 def plot_Franke(filename=""):
     """Plot the Franke function on [0,1] x [0,1] """
     M = 100
