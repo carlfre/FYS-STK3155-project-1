@@ -7,18 +7,18 @@
 ## Folder structure:
 --------------------------
 /notebooks:
-  "Some problems explored with jupyter notebooks in an early stage of the project"
+  Some problems explored with jupyter notebooks in an early stage of the project
   
 /plots
 
-  "Different plots created thought the work on this project"
+  Different plots created thought the work on this project
   
   /other_plots
     "Final plots used in report, note most of theese where created with snip_tools after plt.show() in franke_analysis.py and terraindata_analysis.py" 
     
   /plots_report
   
-    "plots created when solving each problem seperatelly, not relevant for the report"
+    plots created when solving each problem seperatelly, not relevant for the report
     
     /oppgave_d
     
