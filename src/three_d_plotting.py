@@ -1,7 +1,6 @@
 #%%
 import numpy as np
 import matplotlib.pyplot as plt
-
 import regression_tools as rt
 from analysis import generate_data_Franke, franke_function
 
@@ -43,7 +42,7 @@ def plot_3d(X, Y, Z, title="", filename=""):
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlabel('z')
-    plt.title(title)
+    plt.title(title, fontsize=20)
     if filename:
         plt.savefig(filename)
     plt.show()
@@ -129,9 +128,9 @@ def plot_estimated_environment(model_type="ols", n=5, lmbda=None, save=False):
 
 
 def main():
-    plot_estimated_environment("ols", 5,)
-    plot_estimated_environment("ridge", 5, lmbda=1e-10)
-    plot_estimated_environment("lasso", 5, lmbda=1e-5)
+    #plot_estimated_environment("ols", 5,)
+    #plot_estimated_environment("ridge", 5, lmbda=1e-10)
+    #plot_estimated_environment("lasso", 5, lmbda=1e-5)
     plot_Franke()
 
 

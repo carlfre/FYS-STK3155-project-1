@@ -162,6 +162,7 @@ def bootstrap(X, z, B, model):
         distribution[:, b] = beta_b
     return distribution
 
+
 def bootstrap(x, y, z, deg, model, B, test_size=0.25):
     """Returns estimated distributions of beta estimators.
     
@@ -268,6 +269,7 @@ def cross_validation(X, z, k_fold, model):
 
     return MSE_train, MSE_test
 
+
 def CV_gridsearch(X, z, k_fold, lambda_range, model_name):
     """ Returns the optimal parameter lambda whithin lambda range 
 
@@ -300,9 +302,9 @@ def CV_gridsearch(X, z, k_fold, lambda_range, model_name):
         lambda_test_MSE[i] = np.mean(MSE_test)
 
     # Return parameter lambda which minimize MSE
-    print(np.min(lambda_test_MSE))
     lambda_optimal = lambda_range[np.argmin(lambda_test_MSE)]
     return lambda_optimal
+
 
 if __name__ == "__main__":
     """
