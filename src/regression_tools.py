@@ -268,6 +268,41 @@ def cross_validation(X, z, k_fold, model):
 
     return MSE_train, MSE_test
 
+def CV_gridsearch(X, z, k_fold, lambda_range, model_name):
+    """ Returns the optimal parameter lambda whithin lambda range 
+
+    Parameters
+    ----------
+    model: string
+        Either "ols", "ridge", or "lasso" regression
+    X: np.ndarray
+        Design matrix
+    z: np.ndarray
+        Dependent variable
+    k-fold: int
+        Number of k-fold 
+    lambda_range: np.array
+        Range of parameter lambda to do grid search over
+    
+    Returns
+    -------
+    lambda_optimal: float
+        The pramameter lambda whitch minimises MSE
+    """
+
+    lambda_test_MSE = np.zeros(len(lambda_range))
+
+    for i, l in enumerate(lambda_range):
+        model = LinearRegression(model_name, l)
+
+        MSE_train, MSE_test = cross_validation(X, z, k_fold, model)
+        #append mean of MSE to lambda test MSE
+        lambda_test_MSE[i] = np.mean(MSE_test)
+
+    # Return parameter lambda which minimize MSE
+    print(np.min(lambda_test_MSE))
+    lambda_optimal = lambda_range[np.argmin(lambda_test_MSE)]
+    return lambda_optimal
 
 if __name__ == "__main__":
     """

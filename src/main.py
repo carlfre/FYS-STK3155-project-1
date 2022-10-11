@@ -70,7 +70,7 @@ def problem_b():
 
     # Plotting MSE and R2 for all polynomial orders between 2 and 5
     plt.plot(degrees, MSE_arr, "--o", label="MSE - Test")
-    plt.plot(degrees, MSE_arr_train, "-o", label="MSE - Train")
+    plt.plot(degrees, MSE_arr_train, "--o", label="MSE - Train")
     plt.xlabel("Polynomial order")
     plt.ylabel("Mean Square Error")
     plt.title("Change in MSE with increasing polynomial order")
@@ -79,7 +79,7 @@ def problem_b():
     plt.show()
     plt.clf()
     plt.plot(degrees, R2_arr, "--o", label="R2 - Test")
-    plt.plot(degrees, R2_arr_train, "-o", label= "R2 - train")
+    plt.plot(degrees, R2_arr_train, "--o", label= "R2 - train")
     plt.xlabel("Polynomial order")
     plt.ylabel("R2-score")
     plt.title("Change in R2 with increasing polynomial order")
