@@ -6,25 +6,33 @@
 --------------------------
 ## Folder structure:
 --------------------------
-/notebooks:
+### notebooks:
+
   Some problems explored with jupyter notebooks in an early stage of the project
-  
-/plots: Different plots created thought the work on this project
-/plots/other_plots :Final plots used in report, note most of theese where created with snip_tools after plt.show() in franke_analysis.py and terraindata_analysis.py" 
+
+### plots: 
+
+  Different plots created thought the work on this project
+
+    /plots/other_plots:
     
-/plots/plots_report
+    Final plots used in report. 
+    Note most of theese where created with snip_tools after plt.show() in franke_analysis.py and terraindata_analysis.py" 
+
+
+    /plots/plots_report:
   
     plots created when solving each problem seperatelly, not relevant for the report
-    
-    /oppgave_d
-    
-    /oppgave_c
-    
-    /oppgave_e
-    
-    /oppgave_g
-    
-/src
+
+      /oppgave_d
+
+      /oppgave_c
+
+      /oppgave_e
+
+      /oppgave_g
+
+### src:
 
   "Source code used to create, analyse and plot results"
   
